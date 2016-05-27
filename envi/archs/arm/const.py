@@ -3,6 +3,32 @@ MODE_THUMB      = 1
 MODE_JAZELLE    = 2
 MODE_THUMBEE    = 3
 
+'''
+bitfields to support different versions
+For simplicity will use 0xFFFF to say all.
+Note that thumb and arm are both represented
+thumbee is shown but may never be fully implimented
+since was already depreciated
+'''
+archBitMask = [
+#    architecture   bitmask              dec     hex
+    ('THUMB16',     0b0000000000000001), # 1      1
+    ('THUMB2',      0b0000000000000010), # 2      2
+    ('THUMBEE',     0b0000000000000100), # 4      4
+    ('reserved',    0b0000000000001000), # 8      8    reserved for future usage
+    ('ARMv4',       0b0000000000010000), # 16     10
+    ('ARMv5',       0b0000000000100000), # 32     20
+    ('ARMv5T',      0b0000000001000000), # 64     40
+    ('ARMv5E',      0b0000000010000000), # 128    80
+    ('ARMv5J',      0b0000000100000000), # 256    100
+    ('ARMv6',       0b0000001000000000), # 512    200
+    ('ARMv6T2',     0b0000010000000000), # 1024   400
+    ('ARMv7M',      0b0000100000000000), # 2048   800 
+    ('ARMv7AR',     0b0001000000000000), # 4096   1000
+    ('ARMv8',       0b0010000000000000), # 8192   2000
+]
+number_of_archs = len(archBitMask)
+
 #IFLAGS - keep bottom 8-bits for cross-platform flags like envi.IF_NOFALL and envi.IF_BRFALL
 IF_PSR_S     = 1<<32     # This DP instruciton can update CPSR
 IF_B         = 1<<33     # Byte
