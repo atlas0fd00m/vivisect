@@ -188,7 +188,7 @@ def p_dp_imm_shift(opval, va):
     ocode,sflag,Rn,Rd = dpbase(opval)
     Rm = opval & 0xf
     shtype = (opval >> 5) & 0x3
-    shval = (opval >> 7) & 0x1e   # effectively, rot*2
+    shval = (opval >> 7) & 0x1f   # effectively, rot*2
 
     if ocode in dp_noRn:# FIXME: FUGLY (and slow...)
         olist = (
@@ -568,7 +568,7 @@ def p_mult(opval, va):
 def p_dp_imm(opval, va):
     ocode,sflag,Rn,Rd = dpbase(opval)
     imm = opval & 0xff
-    rot = (opval >> 7) & 0x1e   # effectively, rot*2
+    rot = (opval >> 7) & 0x1f   # effectively, rot*2
     
     # hack to make add/sub against PC more readable (also legit for ADR instruction)
     if Rn == REG_PC and ocode in dp_ADR:    # we know PC

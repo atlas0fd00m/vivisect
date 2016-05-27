@@ -89,38 +89,38 @@ instrs = [
         (0xffff, '7745d3e1', 0x4560, 'bics r4, r3, r7, ror r5', 0, ()),
         (0xffff, '7745e3e1', 0x4560, 'mvn r4, r7, ror r5', 0, ()),
         (0xffff, '7745f3e1', 0x4560, 'mvns r4, r7, ror r5', 0, ()),
-        (0xffff, '874503e0', 0x4560, 'and r4, r3, r7, lsl #10', 0, ()),    #ida shows 11 instead of 10. to be confirmed
-        (0xffff, '874513e0', 0x4560, 'ands r4, r3, r7, lsl #10', 0, ()),   #ida shows 11. to be confirmed
-        (0xffff, '874523e0', 0x4560, 'eor r4, r3, r7, lsl #10', 0, ()),    #ida shows 11. to be confirmed
-        (0xffff, '874533e0', 0x4560, 'eors r4, r3, r7, lsl #10', 0, ()),   #ida shows 11. to be confirmed
-        (0xffff, '874543e0', 0x4560, 'sub r4, r3, r7, lsl #10', 0, ()),    #ida shows 11. to be confirmed
-        (0xffff, '874553e0', 0x4560, 'subs r4, r3, r7, lsl #10', 0, ()),   #ida shows 11. to be confirmed
-        (0xffff, '874563e0', 0x4560, 'rsb r4, r3, r7, lsl #10', 0, ()),    #ida shows 11. to be confirmed
-        (0xffff, '874573e0', 0x4560, 'rsbs r4, r3, r7, lsl #10', 0, ()),   #ida shows 11. to be confirmed
-        (0xffff, '874583e0', 0x4560, 'add r4, r3, r7, lsl #10', 0, ()),    #ida shows 11. to be confirmed
-        (0xffff, '874593e0', 0x4560, 'adds r4, r3, r7, lsl #10', 0, ()),    #ida shows 11. to be confirmed
-        (0xffff, '8745a3e0', 0x4560, 'adc r4, r3, r7, lsl #10', 0, ()),    #ida shows 11. to be confirmed
-        (0xffff, '8745b3e0', 0x4560, 'adcs r4, r3, r7, lsl #10', 0, ()),    #ida shows 11. to be confirmed
-        (0xffff, '8745c3e0', 0x4560, 'sbc r4, r3, r7, lsl #10', 0, ()),    #ida shows 11. to be confirmed
-        (0xffff, '8745d3e0', 0x4560, 'sbcs r4, r3, r7, lsl #10', 0, ()),    #ida shows 11. to be confirmed
-        (0xffff, '8745e3e0', 0x4560, 'rsc r4, r3, r7, lsl #10', 0, ()),    #ida shows 11. to be confirmed
-        (0xffff, '8745f3e0', 0x4560, 'rscs r4, r3, r7, lsl #10', 0, ()),    #ida shows 11. to be confirmed
+        (0xffff, '874503e0', 0x4560, 'and r4, r3, r7, lsl #11', 0, ()),    
+        (0xffff, '874513e0', 0x4560, 'ands r4, r3, r7, lsl #11', 0, ()),   
+        (0xffff, '874523e0', 0x4560, 'eor r4, r3, r7, lsl #11', 0, ()),    
+        (0xffff, '874533e0', 0x4560, 'eors r4, r3, r7, lsl #11', 0, ()),  
+        (0xffff, '874543e0', 0x4560, 'sub r4, r3, r7, lsl #11', 0, ()),    
+        (0xffff, '874553e0', 0x4560, 'subs r4, r3, r7, lsl #11', 0, ()),   
+        (0xffff, '874563e0', 0x4560, 'rsb r4, r3, r7, lsl #11', 0, ()),    
+        (0xffff, '874573e0', 0x4560, 'rsbs r4, r3, r7, lsl #11', 0, ()),   
+        (0xffff, '874583e0', 0x4560, 'add r4, r3, r7, lsl #11', 0, ()),    
+        (0xffff, '874593e0', 0x4560, 'adds r4, r3, r7, lsl #11', 0, ()),    
+        (0xffff, '8745a3e0', 0x4560, 'adc r4, r3, r7, lsl #11', 0, ()),    
+        (0xffff, '8745b3e0', 0x4560, 'adcs r4, r3, r7, lsl #11', 0, ()),    
+        (0xffff, '8745c3e0', 0x4560, 'sbc r4, r3, r7, lsl #11', 0, ()),    
+        (0xffff, '8745d3e0', 0x4560, 'sbcs r4, r3, r7, lsl #11', 0, ()),  
+        (0xffff, '8745e3e0', 0x4560, 'rsc r4, r3, r7, lsl #11', 0, ()),    
+        (0xffff, '8745f3e0', 0x4560, 'rscs r4, r3, r7, lsl #11', 0, ()),   
         #(0xffff, '874503e1', 0x4560, 'smlabb r3, r7, r5, r4', 0, ()),  #TypeError: cannot concatenate 'str' and 'NoneType' objects
-        (0xffff, '874513e1', 0x4560, 'tsts r3, r7, lsl #10', 0, ()),  # s added   #ida shows 11. to be confirmed
+        (0xffff, '874513e1', 0x4560, 'tsts r3, r7, lsl #11', 0, ()),  # s added  
         #(0xffff, '874523e1', 0x4560, 'smlawb r3, r7, r5, r4', 0, ()), #TypeError: cannot concatenate 'str' and 'NoneType' objects
-        (0xffff, '874533e1', 0x4560, 'teqs r3, r7, lsl #10', 0, ()),   # s added   #ida shows 11. to be confirmed
+        (0xffff, '874533e1', 0x4560, 'teqs r3, r7, lsl #11', 0, ()),   # s added  
         #(0xffff, '874543e1', 0x4560, 'smlalbb r4, r3, r7, r5', 0, ()),  #UnboundLocalError: local variable 'Rn' referenced before assignment
-        (0xffff, '874553e1', 0x4560, 'cmps r3, r7, lsl #10', 0, ()),  # s added  #ida shows 11. to be confirmed
+        (0xffff, '874553e1', 0x4560, 'cmps r3, r7, lsl #11', 0, ()),  # s added  
         (0xffff, '874563e1', 0x4560, 'smul r3, r7, r5', 0, ()),    # ida returns smulbb
-        (0xffff, '874573e1', 0x4560, 'cmns r3, r7, lsl #10', 0, ()),   # s added   #ida shows 11. to be confirmed
-        (0xffff, '874583e1', 0x4560, 'orr r4, r3, r7, lsl #10', 0, ()),  #ida shows 11. to be confirmed
-        (0xffff, '874593e1', 0x4560, 'orrs r4, r3, r7, lsl #10', 0, ()),  #ida shows 11. to be confirmed
-        (0xffff, '8745a3e1', 0x4560, 'mov r4, r7, lsl #10', 0, ()),  #ida shows 11. to be confirmed
-        (0xffff, '8745b3e1', 0x4560, 'movs r4, r7, lsl #10', 0, ()),  #ida shows 11. to be confirmed
-        (0xffff, '8745c3e1', 0x4560, 'bic r4, r3, r7, lsl #10', 0, ()),  #ida shows 11. to be confirmed
-        (0xffff, '8745d3e1', 0x4560, 'bics r4, r3, r7, lsl #10', 0, ()),  #ida shows 11. to be confirmed
-        (0xffff, '8745e3e1', 0x4560, 'mvn r4, r7, lsl #10', 0, ()),  #ida shows 11. to be confirmed
-        (0xffff, '8745f3e1', 0x4560, 'mvns r4, r7, lsl #10', 0, ()),  #ida shows 11. to be confirmed
+        (0xffff, '874573e1', 0x4560, 'cmns r3, r7, lsl #11', 0, ()),   # s added   
+        (0xffff, '874583e1', 0x4560, 'orr r4, r3, r7, lsl #11', 0, ()),  
+        (0xffff, '874593e1', 0x4560, 'orrs r4, r3, r7, lsl #11', 0, ()),  
+        (0xffff, '8745a3e1', 0x4560, 'mov r4, r7, lsl #11', 0, ()),  
+        (0xffff, '8745b3e1', 0x4560, 'movs r4, r7, lsl #11', 0, ()),  
+        (0xffff, '8745c3e1', 0x4560, 'bic r4, r3, r7, lsl #11', 0, ()),  
+        (0xffff, '8745d3e1', 0x4560, 'bics r4, r3, r7, lsl #11', 0, ()), 
+        (0xffff, '8745e3e1', 0x4560, 'mvn r4, r7, lsl #11', 0, ()),  
+        (0xffff, '8745f3e1', 0x4560, 'mvns r4, r7, lsl #11', 0, ()),  
         (0xffff, '974523e0', 0x4560, 'mla r3, r7, r5, r4', 0, ()),
         (0xffff, '974533e0', 0x4560, 'mlas r3, r7, r5, r4', 0, ()),
         #(0xffff, '974543e0', 0x4560, 'umaal r4, r3, r7, r5', 0, ()),  # invalid instruction
@@ -168,13 +168,13 @@ instrs = [
         (0xffff, 'a745e3e0', 0x4560, 'rsc r4, r3, r7, lsr #11', 0, ()),
         (0xffff, 'a745f3e0', 0x4560, 'rscs r4, r3, r7, lsr #11', 0, ()),
         #(0xffff, 'a74503e1', 0x4560, 'smlatb r3, r7, r5, r4', 0, ()),
-        (0xffff, 'a74513e1', 0x4560, 'tst r3, r7, lsr #11', 0, ()),
-        #(0xffff, 'a74523e1', 0x4560, 'smulwb r3, r7, r5', 0, ()),
-        (0xffff, 'a74533e1', 0x4560, 'teq r3, r7, lsr #11', 0, ()),
+        (0xffff, 'a74513e1', 0x4560, 'tsts r3, r7, lsr #11', 0, ()),   # s added 
+        #(0xffff, 'a74523e1', 0x4560, 'smulwb r3, r7, r5', 0, ()),   
+        (0xffff, 'a74533e1', 0x4560, 'teqs r3, r7, lsr #11', 0, ()),    # s added 
         #(0xffff, 'a74543e1', 0x4560, 'smlaltb r4, r3, r7, r5', 0, ()),
-        (0xffff, 'a74553e1', 0x4560, 'cmp r3, r7, lsr #11', 0, ()),
+        (0xffff, 'a74553e1', 0x4560, 'cmps r3, r7, lsr #11', 0, ()),  # s added 
         (0xffff, 'a74563e1', 0x4560, 'smultb r3, r7, r5', 0, ()),
-        (0xffff, 'a74573e1', 0x4560, 'cmn r3, r7, lsr #11', 0, ()),
+        (0xffff, 'a74573e1', 0x4560, 'cmns r3, r7, lsr #11', 0, ()),  # s added 
         (0xffff, 'a74583e1', 0x4560, 'orr r4, r3, r7, lsr #11', 0, ()),
         (0xffff, 'a74593e1', 0x4560, 'orrs r4, r3, r7, lsr #11', 0, ()),
         (0xffff, 'a745a3e1', 0x4560, 'mov r4, r7, lsr #11', 0, ()),
@@ -836,30 +836,51 @@ class ArmInstructionSet(unittest.TestCase):
                     op = vw.arch.archParseOpcode(bytez.decode('hex'), 0, va)
                     redoprepr = repr(op).replace(' ','').lower()
                     redgoodop = reprOp.replace(' ','')
-                    print  bytez,redgoodop
-                    print  bytez,redoprepr
-                    print
                     if redoprepr != redgoodop:
+                        print  bytez,redgoodop
+                        print  bytez,redoprepr
+                        print
                         #print out binary representation of opcode for checking
                         num, = struct.unpack("<I", bytez.decode('hex'))
                         print hex(num)
                         bs = bin(num)[2:].zfill(32)
                         ''' For reference
-00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
-31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 09 08 07 06 05 04 03 02 01 00
+        00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+        31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 09 08 07 06 05 04 03 02 01 00
                         print out fields to check against bible
                         '''
                         print bs
-                        print bs[0:4], bs[4:6], bs[6], bs[7:11], bs[11], bs[12:16], bs[16:20], bs[20:25], bs[25:27], bs[27], bs[28:] + '  ; register'
-                        print '                           '+bs[20:]+ '  ; immediate'
-                        print '                           '+bs[20:24], bs[24], bs[25:27], bs[27], bs[28:] + '  ; register shift'
-                        print 
+                        #to help with bit decoding - will be removed when done
+                        choice = 0
+                        def zero():
+                            print bs[0:4], bs[4:6], bs[6], bs[7:12], bs[12:24], bs[24:28], bs[28:],'  ; dataprocessing and misc'
+                            print '         ', bs[7:11], bs[11], bs[12:16], bs[16:20], bs[20:], '  ; and, '
+                            print '                          ', bs[20:25], bs[25:28], bs[28:], ' ; lsr (Middle should be 010)'
+                        def one():
+                            print bs[0:4], bs[4:6], bs[6], bs[7:11], bs[11], bs[12:16], bs[16:20], bs[20:25], bs[25:27], bs[27], bs[28:] + '  ; register'
+                            print '                           '+bs[20:]+ '  ; immediate'
+                            print '                           '+bs[20:24], bs[24], bs[25:27], bs[27], bs[28:] + '  ; register shift'
+                        def two():
+                            pass
+                        def three():
+                            pass
+                        case = {0:zero,
+                                1:one,
+                                2:two,
+                                3:three,
+                                }
+                        case[choice]()
+                        print
+                        
                         badcount += 1
+                        
                         raise Exception("FAILED to decode instr:  %.8x %s - should be: %s  - is: %s" % \
                                 ( va, bytez, reprOp, repr(op) ) )
-                        self.assertEqual((bytez, redoprepr, op.iflags), (bytez, redgoodop, iflags))
+                        self.assertEqual((bytez, redoprepr), (bytez, redgoodop))
+                        
                     # test some things
-                    # will comment out when just testing disassembly
+                    # will comment out when just testing disassembly - don't know that emulation stuff works yet
+                    '''
                     if not len(emutests):
                         # if we don't have tests, let's just run it in the emulator anyway and see if things break
                         if not self.validateEmulation(emu, op, (), ()):
@@ -876,6 +897,7 @@ class ArmInstructionSet(unittest.TestCase):
                             else:
                                 raise Exception( "FAILED emulation:  %s" % op )
                                 badcount += 1
+                    '''
 
         #op = vw.arch.archParseOpcode('12c3'.decode('hex'))
         ##rotl.b #2, r3h
@@ -1006,7 +1028,7 @@ def genDPArm():
                 print "%x error" % y
 
     file('dpArmTest','w').write(''.join(out))
-
+"""
     
 
         
