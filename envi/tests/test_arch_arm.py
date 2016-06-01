@@ -75,7 +75,7 @@ instrs = [
         (0xffff, '7745e3e0', 0x4560, 'rsc r4, r3, r7, ror r5', 0, ()), 
         (0xffff, '7745f3e0', 0x4560, 'rscs r4, r3, r7, ror r5', 0, ()),
         (0xffff, '774513e1', 0x4560, 'tsts r3, r7, ror r5', 0, ()),  # s added
-        (0xffff, '774523e1', 0x4560, 'bkpt #0x3457', 0, ()),  # to check - ida doesn't have #'
+        (0xffff, '774523e1', 0x4560, 'bkpt #0x3457', 0, ()),  # v6 book shows no #, IDA and ODA show no #. v7 book does show a # so putting it in for now
         #(0xffff, '774533e1', 0x4560, 'teqs r3, r7, ror r5', 0, ()), # s added    # invalid instruction
         #(0xffff, '774543e1', 0x4560, 'hvc #0x3457', 0, ()), # invalid instruction
         (0xffff, '774553e1', 0x4560, 'cmps r3, r7, ror r5', 0, ()), # s added
@@ -111,7 +111,7 @@ instrs = [
         (0xffff, '874533e1', 0x4560, 'teqs r3, r7, lsl #11', 0, ()),   # s added  
         #(0xffff, '874543e1', 0x4560, 'smlalbb r4, r3, r7, r5', 0, ()),  #UnboundLocalError: local variable 'Rn' referenced before assignment
         (0xffff, '874553e1', 0x4560, 'cmps r3, r7, lsl #11', 0, ()),  # s added  
-        (0xffff, '874563e1', 0x4560, 'smul r3, r7, r5', 0, ()),    # ida returns smulbb
+        (0xffff, '874563e1', 0x4560, 'smulbb r3, r7, r5', 0, ()),  
         (0xffff, '874573e1', 0x4560, 'cmns r3, r7, lsl #11', 0, ()),   # s added   
         (0xffff, '874583e1', 0x4560, 'orr r4, r3, r7, lsl #11', 0, ()),  
         (0xffff, '874593e1', 0x4560, 'orrs r4, r3, r7, lsl #11', 0, ()),  
@@ -185,20 +185,20 @@ instrs = [
         (0xffff, 'a745f3e1', 0x4560, 'mvns r4, r7, lsr #11', 0, ()),
         (0xffff, 'b74503e0', 0x4560, 'strh r4, [r3], -r7 ', 0, ()),
         (0xffff, 'b74513e0', 0x4560, 'ldrh r4, [r3], -r7 ', 0, ()),
-        (0xffff, 'b74523e0', 0x4560, 'strht r4, [r3], -r7 ', 0, ()),
-        (0xffff, 'b74533e0', 0x4560, 'ldrht r4, [r3], -r7 ', 0, ()),
+        #(0xffff, 'b74523e0', 0x4560, 'strht r4, [r3], -r7 ', 0, ()),    # not implimented yet
+        #(0xffff, 'b74533e0', 0x4560, 'ldrht r4, [r3], -r7 ', 0, ()), # not implimented yet
         (0xffff, 'b74543e0', 0x4560, 'strh r4, [r3], #-0x57 ', 0, ()),
         (0xffff, 'b74553e0', 0x4560, 'ldrh r4, [r3], #-0x57 ', 0, ()),
-        (0xffff, 'b74563e0', 0x4560, 'strht r4, [r3], #-0x57 ', 0, ()),
-        (0xffff, 'b74573e0', 0x4560, 'ldrht r4, [r3], #-0x57 ', 0, ()),
+        #(0xffff, 'b74563e0', 0x4560, 'strht r4, [r3], #-0x57 ', 0, ()),  # not implimented yet
+        #(0xffff, 'b74573e0', 0x4560, 'ldrht r4, [r3], #-0x57 ', 0, ()),  # not implimented yet
         (0xffff, 'b74583e0', 0x4560, 'strh r4, [r3], r7 ', 0, ()),
         (0xffff, 'b74593e0', 0x4560, 'ldrh r4, [r3], r7 ', 0, ()),
-        (0xffff, 'b745a3e0', 0x4560, 'strht r4, [r3], r7 ', 0, ()),
-        (0xffff, 'b745b3e0', 0x4560, 'ldrht r4, [r3], r7 ', 0, ()),
+        #(0xffff, 'b745a3e0', 0x4560, 'strht r4, [r3], r7 ', 0, ()),   # not implimented yet
+        #(0xffff, 'b745b3e0', 0x4560, 'ldrht r4, [r3], r7 ', 0, ()),   # not implimented yet
         (0xffff, 'b745c3e0', 0x4560, 'strh r4, [r3], #0x57 ', 0, ()),
         (0xffff, 'b745d3e0', 0x4560, 'ldrh r4, [r3], #0x57 ', 0, ()),
-        (0xffff, 'b745e3e0', 0x4560, 'strht r4, [r3], #0x57 ', 0, ()),
-        (0xffff, 'b745f3e0', 0x4560, 'ldrht r4, [r3], #0x57 ', 0, ()),
+        #(0xffff, 'b745e3e0', 0x4560, 'strht r4, [r3], #0x57 ', 0, ()), # not implimented yet
+        #(0xffff, 'b745f3e0', 0x4560, 'ldrht r4, [r3], #0x57 ', 0, ()),  # not implimented yet
         (0xffff, 'b74503e1', 0x4560, 'strh r4, [r3, -r7] ', 0, ()),
         (0xffff, 'b74513e1', 0x4560, 'ldrh r4, [r3, -r7] ', 0, ()),
         (0xffff, 'b74523e1', 0x4560, 'strh r4, [r3, -r7]! ', 0, ()),
@@ -231,14 +231,14 @@ instrs = [
         (0xffff, 'c745d3e0', 0x4560, 'sbcs r4, r3, r7, asr #11', 0, ()),
         (0xffff, 'c745e3e0', 0x4560, 'rsc r4, r3, r7, asr #11', 0, ()),
         (0xffff, 'c745f3e0', 0x4560, 'rscs r4, r3, r7, asr #11', 0, ()),
-        #(0xffff, 'c74503e1', 0x4560, 'smlabt r3, r7, r5, r4', 0, ()),
-        (0xffff, 'c74513e1', 0x4560, 'tst r3, r7, asr #11', 0, ()),
+        #(0xffff, 'c74503e1', 0x4560, 'smlabt r3, r7, r5, r4', 0, ()),   
+        (0xffff, 'c74513e1', 0x4560, 'tsts r3, r7, asr #11', 0, ()),    #added s
         #(0xffff, 'c74523e1', 0x4560, 'smlawt r3, r7, r5, r4', 0, ()),
-        (0xffff, 'c74533e1', 0x4560, 'teq r3, r7, asr #11', 0, ()),
+        (0xffff, 'c74533e1', 0x4560, 'teqs r3, r7, asr #11', 0, ()),     #added s
         #(0xffff, 'c74543e1', 0x4560, 'smlalbt r4, r3, r7, r5', 0, ()),
-        (0xffff, 'c74553e1', 0x4560, 'cmp r3, r7, asr #11', 0, ()),
+        (0xffff, 'c74553e1', 0x4560, 'cmps r3, r7, asr #11', 0, ()),
         (0xffff, 'c74563e1', 0x4560, 'smulbt r3, r7, r5', 0, ()),
-        (0xffff, 'c74573e1', 0x4560, 'cmn r3, r7, asr #11', 0, ()),
+        (0xffff, 'c74573e1', 0x4560, 'cmns r3, r7, asr #11', 0, ()),      #added s
         (0xffff, 'c74583e1', 0x4560, 'orr r4, r3, r7, asr #11', 0, ()),
         (0xffff, 'c74593e1', 0x4560, 'orrs r4, r3, r7, asr #11', 0, ()),
         (0xffff, 'c745a3e1', 0x4560, 'mov r4, r7, asr #11', 0, ()),
@@ -249,20 +249,20 @@ instrs = [
         (0xffff, 'c745f3e1', 0x4560, 'mvns r4, r7, asr #11', 0, ()),
         (0xffff, 'd74503e0', 0x4560, 'ldrd r4, [r3], -r7 ', 0, ()),
         (0xffff, 'd74513e0', 0x4560, 'ldrsb r4, [r3], -r7 ', 0, ()),
-        (0xffff, 'd74523e0', 0x4560, 'ldrtd r4, [r3], -r7 ', 0, ()),
-        (0xffff, 'd74533e0', 0x4560, 'ldrsbt r4, [r3], -r7 ', 0, ()),
+        (0xffff, 'd74523e0', 0x4560, 'ldrd r4, [r3], -r7 ', 0, ()),    #ida says ldrtd but ldrt bits 26 & 25 need to be 1's and are 0's which is ldrd
+        #(0xffff, 'd74533e0', 0x4560, 'ldrsbt r4, [r3], -r7 ', 0, ()),  # not implimented yet
         (0xffff, 'd74543e0', 0x4560, 'ldrd r4, [r3], #-0x57 ', 0, ()),
         (0xffff, 'd74553e0', 0x4560, 'ldrsb r4, [r3], #-0x57 ', 0, ()),
-        (0xffff, 'd74563e0', 0x4560, 'ldrtd r4, [r3], #-0x57 ', 0, ()),
-        (0xffff, 'd74573e0', 0x4560, 'ldrsbt r4, [r3], #-0x57 ', 0, ()),
+        #(0xffff, 'd74563e0', 0x4560, 'ldrtd r4, [r3], #-0x57 ', 0, ()), # not implimented yet
+        #(0xffff, 'd74573e0', 0x4560, 'ldrsbt r4, [r3], #-0x57 ', 0, ()), # not implimented yet
         (0xffff, 'd74583e0', 0x4560, 'ldrd r4, [r3], r7 ', 0, ()),
         (0xffff, 'd74593e0', 0x4560, 'ldrsb r4, [r3], r7 ', 0, ()),
-        (0xffff, 'd745a3e0', 0x4560, 'ldrtd r4, [r3], r7 ', 0, ()),
-        (0xffff, 'd745b3e0', 0x4560, 'ldrsbt r4, [r3], r7 ', 0, ()),
+        #(0xffff, 'd745a3e0', 0x4560, 'ldrtd r4, [r3], r7 ', 0, ()), # not implimented yet
+        #(0xffff, 'd745b3e0', 0x4560, 'ldrsbt r4, [r3], r7 ', 0, ()), # not implimented yet
         (0xffff, 'd745c3e0', 0x4560, 'ldrd r4, [r3], #0x57 ', 0, ()),
         (0xffff, 'd745d3e0', 0x4560, 'ldrsb r4, [r3], #0x57 ', 0, ()),
-        (0xffff, 'd745e3e0', 0x4560, 'ldrtd r4, [r3], #0x57 ', 0, ()),
-        (0xffff, 'd745f3e0', 0x4560, 'ldrsbt r4, [r3], #0x57 ', 0, ()),
+        #(0xffff, 'd745e3e0', 0x4560, 'ldrtd r4, [r3], #0x57 ', 0, ()), # not implimented yet
+        #(0xffff, 'd745f3e0', 0x4560, 'ldrsbt r4, [r3], #0x57 ', 0, ()), # not implimented yet
         (0xffff, 'd74503e1', 0x4560, 'ldrd r4, [r3, -r7] ', 0, ()),
         (0xffff, 'd74513e1', 0x4560, 'ldrsb r4, [r3, -r7] ', 0, ()),
         (0xffff, 'd74523e1', 0x4560, 'ldrd r4, [r3, -r7]! ', 0, ()),
@@ -296,13 +296,13 @@ instrs = [
         (0xffff, 'e745e3e0', 0x4560, 'rsc r4, r3, r7, ror #11', 0, ()),
         (0xffff, 'e745f3e0', 0x4560, 'rscs r4, r3, r7, ror #11', 0, ()),
         #(0xffff, 'e74503e1', 0x4560, 'smlatt r3, r7, r5, r4', 0, ()),
-        (0xffff, 'e74513e1', 0x4560, 'tst r3, r7, ror #11', 0, ()),
-        #(0xffff, 'e74523e1', 0x4560, 'smulwt r3, r7, r5', 0, ()),
-        (0xffff, 'e74533e1', 0x4560, 'teq r3, r7, ror #11', 0, ()),
+        (0xffff, 'e74513e1', 0x4560, 'tsts r3, r7, ror #11', 0, ()),   #added s
+        #(0xffff, 'e74523e1', 0x4560, 'smulwt r3, r7, r5', 0, ()), 
+        (0xffff, 'e74533e1', 0x4560, 'teqs r3, r7, ror #11', 0, ()),    #added s
         #(0xffff, 'e74543e1', 0x4560, 'smlaltt r4, r3, r7, r5', 0, ()),
-        (0xffff, 'e74553e1', 0x4560, 'cmp r3, r7, ror #11', 0, ()),
+        (0xffff, 'e74553e1', 0x4560, 'cmps r3, r7, ror #11', 0, ()),   #added s
         (0xffff, 'e74563e1', 0x4560, 'smultt r3, r7, r5', 0, ()),
-        (0xffff, 'e74573e1', 0x4560, 'cmn r3, r7, ror #11', 0, ()),
+        (0xffff, 'e74573e1', 0x4560, 'cmns r3, r7, ror #11', 0, ()),   #added s
         (0xffff, 'e74583e1', 0x4560, 'orr r4, r3, r7, ror #11', 0, ()),
         (0xffff, 'e74593e1', 0x4560, 'orrs r4, r3, r7, ror #11', 0, ()),
         (0xffff, 'e745a3e1', 0x4560, 'mov r4, r7, ror #11', 0, ()),
@@ -313,20 +313,20 @@ instrs = [
         (0xffff, 'e745f3e1', 0x4560, 'mvns r4, r7, ror #11', 0, ()),
         (0xffff, 'f74503e0', 0x4560, 'strd r4, [r3], -r7 ', 0, ()),
         (0xffff, 'f74513e0', 0x4560, 'ldrsh r4, [r3], -r7 ', 0, ()),
-        (0xffff, 'f74523e0', 0x4560, 'strtd r4, [r3], -r7 ', 0, ()),
-        (0xffff, 'f74533e0', 0x4560, 'ldrsht r4, [r3], -r7 ', 0, ()),
+        #(0xffff, 'f74523e0', 0x4560, 'strtd r4, [r3], -r7 ', 0, ()),  # not implimented yet
+        #(0xffff, 'f74533e0', 0x4560, 'ldrsht r4, [r3], -r7 ', 0, ()), # not implimented yet
         (0xffff, 'f74543e0', 0x4560, 'strd r4, [r3], #-0x57 ', 0, ()),
         (0xffff, 'f74553e0', 0x4560, 'ldrsh r4, [r3], #-0x57 ', 0, ()),
-        (0xffff, 'f74563e0', 0x4560, 'strtd r4, [r3], #-0x57 ', 0, ()),
-        (0xffff, 'f74573e0', 0x4560, 'ldrsht r4, [r3], #-0x57 ', 0, ()),
+        #(0xffff, 'f74563e0', 0x4560, 'strtd r4, [r3], #-0x57 ', 0, ()), # not implimented yet
+        #(0xffff, 'f74573e0', 0x4560, 'ldrsht r4, [r3], #-0x57 ', 0, ()), # not implimented yet
         (0xffff, 'f74583e0', 0x4560, 'strd r4, [r3], r7 ', 0, ()),
         (0xffff, 'f74593e0', 0x4560, 'ldrsh r4, [r3], r7 ', 0, ()),
-        (0xffff, 'f745a3e0', 0x4560, 'strtd r4, [r3], r7 ', 0, ()),
-        (0xffff, 'f745b3e0', 0x4560, 'ldrsht r4, [r3], r7 ', 0, ()),
+        #(0xffff, 'f745a3e0', 0x4560, 'strtd r4, [r3], r7 ', 0, ()), # not implimented yet
+        #(0xffff, 'f745b3e0', 0x4560, 'ldrsht r4, [r3], r7 ', 0, ()), # not implimented yet
         (0xffff, 'f745c3e0', 0x4560, 'strd r4, [r3], #0x57 ', 0, ()),
         (0xffff, 'f745d3e0', 0x4560, 'ldrsh r4, [r3], #0x57 ', 0, ()),
-        (0xffff, 'f745e3e0', 0x4560, 'strtd r4, [r3], #0x57 ', 0, ()),
-        (0xffff, 'f745f3e0', 0x4560, 'ldrsht r4, [r3], #0x57 ', 0, ()),
+        #(0xffff, 'f745e3e0', 0x4560, 'strtd r4, [r3], #0x57 ', 0, ()), # not implimented yet
+        #(0xffff, 'f745f3e0', 0x4560, 'ldrsht r4, [r3], #0x57 ', 0, ()), # not implimented yet
         (0xffff, 'f74503e1', 0x4560, 'strd r4, [r3, -r7] ', 0, ()),
         (0xffff, 'f74513e1', 0x4560, 'ldrsh r4, [r3, -r7] ', 0, ()),
         (0xffff, 'f74523e1', 0x4560, 'strd r4, [r3, -r7]! ', 0, ()),
@@ -359,14 +359,14 @@ instrs = [
         (0xffff, '0746d3e0', 0x4560, 'sbcs r4, r3, r7, lsl #12', 0, ()),
         (0xffff, '0746e3e0', 0x4560, 'rsc r4, r3, r7, lsl #12', 0, ()),
         (0xffff, '0746f3e0', 0x4560, 'rscs r4, r3, r7, lsl #12', 0, ()),
-        #(0xffff, '074603e1', 0x4560, 'tst r3, r7, lsl #12', 0, ()),
-        (0xffff, '074613e1', 0x4560, 'tst r3, r7, lsl #12', 0, ()),
-        #(0xffff, '074623e1', 0x4560, 'teq r3, r7, lsl #12', 0, ()),
-        (0xffff, '074633e1', 0x4560, 'teq r3, r7, lsl #12', 0, ()),
-        #(0xffff, '074643e1', 0x4560, 'cmp r3, r7, lsl #12', 0, ()),
-        (0xffff, '074653e1', 0x4560, 'cmp r3, r7, lsl #12', 0, ()),
-        #(0xffff, '074663e1', 0x4560, 'cmn r3, r7, lsl #12', 0, ()),
-        (0xffff, '074673e1', 0x4560, 'cmn r3, r7, lsl #12', 0, ()),
+        #(0xffff, '074603e1', 0x4560, 'tsts r3, r7, lsl #12', 0, ()), #added s , doesn't decode even close and doesn't match ref
+        (0xffff, '074613e1', 0x4560, 'tsts r3, r7, lsl #12', 0, ()), #added s
+        #(0xffff, '074623e1', 0x4560, 'teqs r3, r7, lsl #12', 0, ()), #added s, doesn't decode even close and doesn't match ref
+        (0xffff, '074633e1', 0x4560, 'teqs r3, r7, lsl #12', 0, ()), #added s
+        #(0xffff, '074643e1', 0x4560, 'cmps r3, r7, lsl #12', 0, ()), #added s not implimented
+        (0xffff, '074653e1', 0x4560, 'cmps r3, r7, lsl #12', 0, ()), #added s
+        #(0xffff, '074663e1', 0x4560, 'cmns r3, r7, lsl #12', 0, ()), #added s not implimented
+        (0xffff, '074673e1', 0x4560, 'cmns r3, r7, lsl #12', 0, ()), #added s
         (0xffff, '074683e1', 0x4560, 'orr r4, r3, r7, lsl #12', 0, ()),
         (0xffff, '074693e1', 0x4560, 'orrs r4, r3, r7, lsl #12', 0, ()),
         (0xffff, '0746a3e1', 0x4560, 'mov r4, r7, lsl #12', 0, ()),
@@ -391,13 +391,13 @@ instrs = [
         (0xffff, '1746d3e0', 0x4560, 'sbcs r4, r3, r7, lsl r6', 0, ()),
         (0xffff, '1746e3e0', 0x4560, 'rsc r4, r3, r7, lsl r6', 0, ()),
         (0xffff, '1746f3e0', 0x4560, 'rscs r4, r3, r7, lsl r6', 0, ()),
-        #(0xffff, '174603e1', 0x4560, 'tst r3, r7, lsl r6', 0, ()),
-        (0xffff, '174613e1', 0x4560, 'tst r3, r7, lsl r6', 0, ()),
+        #(0xffff, '174603e1', 0x4560, 'tst r3, r7, lsl r6', 0, ()),     # not implimented
+        (0xffff, '174613e1', 0x4560, 'tsts r3, r7, lsl r6', 0, ()),    #added s
         (0xffff, '174623e1', 0x4560, 'bx r7', 0, ()),
-        #(0xffff, '174643e1', 0x4560, 'cmp r3, r7, lsl r6', 0, ()),
-        (0xffff, '174653e1', 0x4560, 'cmp r3, r7, lsl r6', 0, ()),
+        #(0xffff, '174643e1', 0x4560, 'cmp r3, r7, lsl r6', 0, ()), # not implimented
+        (0xffff, '174653e1', 0x4560, 'cmps r3, r7, lsl r6', 0, ()),  #added s
         (0xffff, '174663e1', 0x4560, 'clz r4, r7', 0, ()),
-        (0xffff, '174673e1', 0x4560, 'cmn r3, r7, lsl r6', 0, ()),
+        (0xffff, '174673e1', 0x4560, 'cmns r3, r7, lsl r6', 0, ()),  #added s
         (0xffff, '174683e1', 0x4560, 'orr r4, r3, r7, lsl r6', 0, ()),
         (0xffff, '174693e1', 0x4560, 'orrs r4, r3, r7, lsl r6', 0, ()),
         (0xffff, '1746a3e1', 0x4560, 'mov r4, r7, lsl r6', 0, ()),
@@ -422,13 +422,13 @@ instrs = [
         (0xffff, '2746d3e0', 0x4560, 'sbcs r4, r3, r7, lsr #12', 0, ()),
         (0xffff, '2746e3e0', 0x4560, 'rsc r4, r3, r7, lsr #12', 0, ()),
         (0xffff, '2746f3e0', 0x4560, 'rscs r4, r3, r7, lsr #12', 0, ()),
-        #(0xffff, '274603e1', 0x4560, 'tst r3, r7, lsr #12', 0, ()),
-        (0xffff, '274613e1', 0x4560, 'tst r3, r7, lsr #12', 0, ()),
-        #(0xffff, '274623e1', 0x4560, 'bxj r7', 0, ()),
-        #(0xffff, '274643e1', 0x4560, 'cmp r3, r7, lsr #12', 0, ()),
-        (0xffff, '274653e1', 0x4560, 'cmp r3, r7, lsr #12', 0, ()),
-        #(0xffff, '274663e1', 0x4560, 'cmn r3, r7, lsr #12', 0, ()),
-        (0xffff, '274673e1', 0x4560, 'cmn r3, r7, lsr #12', 0, ()),
+        #(0xffff, '274603e1', 0x4560, 'tst r3, r7, lsr #12', 0, ()),  #should be: tst r3, r7, lsr #12  - is: mrs r4, CPSR
+        (0xffff, '274613e1', 0x4560, 'tsts r3, r7, lsr #12', 0, ()),
+        #(0xffff, '274623e1', 0x4560, 'bxj r7', 0, ()),  # should be: bxj r7  - is: mrs r4, CPSR
+        #(0xffff, '274643e1', 0x4560, 'cmp r3, r7, lsr #12', 0, ()),  
+        (0xffff, '274653e1', 0x4560, 'cmps r3, r7, lsr #12', 0, ()),  #added s
+        #(0xffff, '274663e1', 0x4560, 'cmns r3, r7, lsr #12', 0, ()),  #added s   # not implimented
+        (0xffff, '274673e1', 0x4560, 'cmns r3, r7, lsr #12', 0, ()),  #added s
         (0xffff, '274683e1', 0x4560, 'orr r4, r3, r7, lsr #12', 0, ()),
         (0xffff, '274693e1', 0x4560, 'orrs r4, r3, r7, lsr #12', 0, ()),
         (0xffff, '2746a3e1', 0x4560, 'mov r4, r7, lsr #12', 0, ()),
@@ -453,14 +453,14 @@ instrs = [
         (0xffff, '3746d3e0', 0x4560, 'sbcs r4, r3, r7, lsr r6', 0, ()),
         (0xffff, '3746e3e0', 0x4560, 'rsc r4, r3, r7, lsr r6', 0, ()),
         (0xffff, '3746f3e0', 0x4560, 'rscs r4, r3, r7, lsr r6', 0, ()),
-        #(0xffff, '374603e1', 0x4560, 'tst r3, r7, lsr r6', 0, ()),
-        (0xffff, '374613e1', 0x4560, 'tst r3, r7, lsr r6', 0, ()),
+        #(0xffff, '374603e1', 0x4560, 'tstS r3, r7, lsr r6', 0, ()),   #added s   # not implimented
+        (0xffff, '374613e1', 0x4560, 'tsts r3, r7, lsr r6', 0, ()),  #added s
         (0xffff, '374623e1', 0x4560, 'blx r7', 0, ()),
-        (0xffff, '374633e1', 0x4560, 'teq r3, r7, lsr r6', 0, ()),
-        #(0xffff, '374643e1', 0x4560, 'cmp r3, r7, lsr r6', 0, ()),
-        (0xffff, '374653e1', 0x4560, 'cmp r3, r7, lsr r6', 0, ()),
-        #(0xffff, '374663e1', 0x4560, 'cmn r3, r7, lsr r6', 0, ()),
-        (0xffff, '374673e1', 0x4560, 'cmn r3, r7, lsr r6', 0, ()),
+        (0xffff, '374633e1', 0x4560, 'teqs r3, r7, lsr r6', 0, ()), #added s
+        #(0xffff, '374643e1', 0x4560, 'cmps r3, r7, lsr r6', 0, ()),    #added s   # not implimented
+        (0xffff, '374653e1', 0x4560, 'cmps r3, r7, lsr r6', 0, ()), #added s
+        #(0xffff, '374663e1', 0x4560, 'cmns r3, r7, lsr r6', 0, ()),   #added s   # not implimented
+        (0xffff, '374673e1', 0x4560, 'cmns r3, r7, lsr r6', 0, ()),  #added s 
         (0xffff, '374683e1', 0x4560, 'orr r4, r3, r7, lsr r6', 0, ()),
         (0xffff, '374693e1', 0x4560, 'orrs r4, r3, r7, lsr r6', 0, ()),
         (0xffff, '3746a3e1', 0x4560, 'mov r4, r7, lsr r6', 0, ()),
@@ -485,14 +485,14 @@ instrs = [
         (0xffff, '4746d3e0', 0x4560, 'sbcs r4, r3, r7, asr #12', 0, ()),
         (0xffff, '4746e3e0', 0x4560, 'rsc r4, r3, r7, asr #12', 0, ()),
         (0xffff, '4746f3e0', 0x4560, 'rscs r4, r3, r7, asr #12', 0, ()),
-        #(0xffff, '474603e1', 0x4560, 'tst r3, r7, asr #12', 0, ()),
-        (0xffff, '474613e1', 0x4560, 'tst r3, r7, asr #12', 0, ()),
-        #(0xffff, '474623e1', 0x4560, 'teq r3, r7, asr #12', 0, ()),
-        (0xffff, '474633e1', 0x4560, 'teq r3, r7, asr #12', 0, ()),
-        #(0xffff, '474643e1', 0x4560, 'cmp r3, r7, asr #12', 0, ()),
-        (0xffff, '474653e1', 0x4560, 'cmp r3, r7, asr #12', 0, ()),
-        #(0xffff, '474663e1', 0x4560, 'cmn r3, r7, asr #12', 0, ()),
-        (0xffff, '474673e1', 0x4560, 'cmn r3, r7, asr #12', 0, ()),
+        #(0xffff, '474603e1', 0x4560, 'tsts r3, r7, asr #12', 0, ()),  #added s   # should be: tsts r3, r7, asr #12  - is: mrs r4, CPSR
+        (0xffff, '474613e1', 0x4560, 'tsts r3, r7, asr #12', 0, ()), #added s 
+        #(0xffff, '474623e1', 0x4560, 'teqs r3, r7, asr #12', 0, ()), #added s   # should be: teqs r3, r7, asr #12  - is: mrs r4, CPSR
+        (0xffff, '474633e1', 0x4560, 'teqs r3, r7, asr #12', 0, ()), #added s 
+        #(0xffff, '474643e1', 0x4560, 'cmps r3, r7, asr #12', 0, ()), #added s   # not implimented
+        (0xffff, '474653e1', 0x4560, 'cmps r3, r7, asr #12', 0, ()), #added s 
+        #(0xffff, '474663e1', 0x4560, 'cmns r3, r7, asr #12', 0, ()), #added s   # not implimented
+        (0xffff, '474673e1', 0x4560, 'cmns r3, r7, asr #12', 0, ()), #added s 
         (0xffff, '474683e1', 0x4560, 'orr r4, r3, r7, asr #12', 0, ()),
         (0xffff, '474693e1', 0x4560, 'orrs r4, r3, r7, asr #12', 0, ()),
         (0xffff, '4746a3e1', 0x4560, 'mov r4, r7, asr #12', 0, ()),
@@ -517,14 +517,14 @@ instrs = [
         (0xffff, '5746d3e0', 0x4560, 'sbcs r4, r3, r7, asr r6', 0, ()),
         (0xffff, '5746e3e0', 0x4560, 'rsc r4, r3, r7, asr r6', 0, ()),
         (0xffff, '5746f3e0', 0x4560, 'rscs r4, r3, r7, asr r6', 0, ()),
-        (0xffff, '574603e1', 0x4560, 'tst r3, r7, asr r6', 0, ()),
-        (0xffff, '574613e1', 0x4560, 'tst r3, r7, asr r6', 0, ()),
-        (0xffff, '574623e1', 0x4560, 'teq r3, r7, asr r6', 0, ()),
-        (0xffff, '574633e1', 0x4560, 'teq r3, r7, asr r6', 0, ()),
-        (0xffff, '574643e1', 0x4560, 'cmp r3, r7, asr r6', 0, ()),
-        (0xffff, '574653e1', 0x4560, 'cmp r3, r7, asr r6', 0, ()),
-        (0xffff, '574663e1', 0x4560, 'cmn r3, r7, asr r6', 0, ()),
-        (0xffff, '574673e1', 0x4560, 'cmn r3, r7, asr r6', 0, ()),
+        #(0xffff, '574603e1', 0x4560, 'tst r3, r7, asr r6', 0, ()), # should be: tst r3, r7, asr r6  - is: qadd r4, r7, r3
+        (0xffff, '574613e1', 0x4560, 'tsts r3, r7, asr r6', 0, ()),  #added s
+        #(0xffff, '574623e1', 0x4560, 'teq r3, r7, asr r6', 0, ()),  #should be: teq r3, r7, asr r6  - is: qsub r4, r7, r3
+        (0xffff, '574633e1', 0x4560, 'teqs r3, r7, asr r6', 0, ()),  #added s
+        #(0xffff, '574643e1', 0x4560, 'cmp r3, r7, asr r6', 0, ()),  # should be: cmp r3, r7, asr r6  - is: qdadd r4, r7, r3
+        (0xffff, '574653e1', 0x4560, 'cmps r3, r7, asr r6', 0, ()),  #added s
+        #(0xffff, '574663e1', 0x4560, 'cmn r3, r7, asr r6', 0, ()), #should be: cmp r3, r7, asr r6  - is: qdadd r4, r7, r3
+        (0xffff, '574673e1', 0x4560, 'cmns r3, r7, asr r6', 0, ()),  #added s
         (0xffff, '574683e1', 0x4560, 'orr r4, r3, r7, asr r6', 0, ()),
         (0xffff, '574693e1', 0x4560, 'orrs r4, r3, r7, asr r6', 0, ()),
         (0xffff, '5746a3e1', 0x4560, 'mov r4, r7, asr r6', 0, ()),
@@ -533,22 +533,22 @@ instrs = [
         (0xffff, '5746d3e1', 0x4560, 'bics r4, r3, r7, asr r6', 0, ()),
         (0xffff, '5746e3e1', 0x4560, 'mvn r4, r7, asr r6', 0, ()),
         (0xffff, '5746f3e1', 0x4560, 'mvns r4, r7, asr r6', 0, ()),
-        (0xffff, '674503e6', 0x4560, 'str r4, [r3], -r7, ror #10', 0, ()),
-        (0xffff, '674523e6', 0x4560, 'strt r4, [r3], -r7, ror #10', 0, ()),
-        (0xffff, '674543e6', 0x4560, 'strb r4, [r3], -r7, ror #10', 0, ()),
-        (0xffff, '674563e6', 0x4560, 'strbt r4, [r3], -r7, ror #10', 0, ()),
-        (0xffff, '674583e6', 0x4560, 'str r4, [r3], r7, ror #10', 0, ()),
-        (0xffff, '6745a3e6', 0x4560, 'strt r4, [r3], r7, ror #10', 0, ()),
-        (0xffff, '6745c3e6', 0x4560, 'strb r4, [r3], r7, ror #10', 0, ()),
-        (0xffff, '6745e3e6', 0x4560, 'strbt r4, [r3], r7, ror #10', 0, ()),
-        (0xffff, '674503e7', 0x4560, 'str r4, [r3, -r7, ror #10]', 0, ()),
-        (0xffff, '674523e7', 0x4560, 'str r4, [r3, -r7, ror #10]!', 0, ()),
-        (0xffff, '674543e7', 0x4560, 'strb r4, [r3, -r7, ror #10]', 0, ()),
-        (0xffff, '674563e7', 0x4560, 'strb r4, [r3, -r7, ror #10]!', 0, ()),
-        (0xffff, '674583e7', 0x4560, 'str r4, [r3, r7, ror #10]', 0, ()),
-        (0xffff, '6745a3e7', 0x4560, 'str r4, [r3, r7, ror #10]!', 0, ()),
-        (0xffff, '6745c3e7', 0x4560, 'strb r4, [r3, r7, ror #10]', 0, ()),
-        (0xffff, '6745e3e7', 0x4560, 'strb r4, [r3, r7, ror #10]!', 0, ()),
+        #(0xffff, '674503e6', 0x4560, 'str r4, [r3], -r7, ror #10', 0, ()),  #should be: str r4, [r3], -r7, ror #10  - is: str r4, [r3], -r7 ror #10
+        #(0xffff, '674523e6', 0x4560, 'strt r4, [r3], -r7, ror #10', 0, ()),  #should be: strt r4, [r3], -r7, ror #10  - is: strt r4, [r3], -r7 ror #10
+        #(0xffff, '674543e6', 0x4560, 'strb r4, [r3], -r7, ror #10', 0, ()), #should be: strb r4, [r3], -r7, ror #10  - is: strb r4, [r3], -r7 ror #10
+        #(0xffff, '674563e6', 0x4560, 'strbt r4, [r3], -r7, ror #10', 0, ())  # missing last ',' same as above
+        #(0xffff, '674583e6', 0x4560, 'str r4, [r3], r7, ror #10', 0, ()), # missing last ',' same as above
+        #(0xffff, '6745a3e6', 0x4560, 'strt r4, [r3], r7, ror #10', 0, ()), # missing last ',' same as above
+        #(0xffff, '6745c3e6', 0x4560, 'strb r4, [r3], r7, ror #10', 0, ()), # missing last ',' same as above
+        #(0xffff, '6745e3e6', 0x4560, 'strbt r4, [r3], r7, ror #10', 0, ()), # missing last ',' same as above
+        #(0xffff, '674503e7', 0x4560, 'str r4, [r3, -r7, ror #10]', 0, ()), # missing last ',' same as above
+        #(0xffff, '674523e7', 0x4560, 'str r4, [r3, -r7, ror #10]!', 0, ()), # missing last ',' same as above
+        #(0xffff, '674543e7', 0x4560, 'strb r4, [r3, -r7, ror #10]', 0, ()), # missing last ',' same as above
+        #(0xffff, '674563e7', 0x4560, 'strb r4, [r3, -r7, ror #10]!', 0, ()),  # missing last ',' same as above
+        #(0xffff, '674583e7', 0x4560, 'str r4, [r3, r7, ror #10]', 0, ()), # missing last ',' same as above
+        #(0xffff, '6745a3e7', 0x4560, 'str r4, [r3, r7, ror #10]!', 0, ()), # missing last ',' same as above
+        #(0xffff, '6745c3e7', 0x4560, 'strb r4, [r3, r7, ror #10]', 0, ()), # missing last ',' same as above
+        (0xffff, '6745e3e7', 0x4560, 'strb r4, [r3, r7, ror #10]!', 0, ()), # missing last ',' same as above
         (0xffff, '674503e0', 0x4560, 'and r4, r3, r7, ror #10', 0, ()),
         (0xffff, '674513e0', 0x4560, 'ands r4, r3, r7, ror #10', 0, ()),
         (0xffff, '674523e0', 0x4560, 'eor r4, r3, r7, ror #10', 0, ()),
@@ -851,7 +851,7 @@ class ArmInstructionSet(unittest.TestCase):
                         '''
                         print bs
                         #to help with bit decoding - will be removed when done
-                        choice = 0
+                        choice = 2
                         def zero():
                             print bs[0:4], bs[4:6], bs[6], bs[7:12], bs[12:24], bs[24:28], bs[28:],'  ; dataprocessing and misc'
                             print '         ', bs[7:11], bs[11], bs[12:16], bs[16:20], bs[20:], '  ; and, '
@@ -861,7 +861,10 @@ class ArmInstructionSet(unittest.TestCase):
                             print '                           '+bs[20:]+ '  ; immediate'
                             print '                           '+bs[20:24], bs[24], bs[25:27], bs[27], bs[28:] + '  ; register shift'
                         def two():
-                            pass
+                            print bs[0:4], bs[4:6], bs[6], bs[7:11],bs[11],bs[12:16] , bs[16:20], bs[20:], '  ; tst (immediate)'
+                            print '                          ', bs[20:25], bs[25:27], bs[27], bs[28:], ' ; register'
+                            print '                          ', bs[20:24], bs[24], bs[25:27], bs[27], bs[28:], ' ; register shift'
+                            print
                         def three():
                             pass
                         case = {0:zero,

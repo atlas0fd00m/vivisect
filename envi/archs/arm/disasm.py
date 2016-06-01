@@ -218,7 +218,7 @@ def p_dp_imm_shift(opval, va):
 qop_mnem = ('qadd','qsub','qdadd','qdsub')
 smla_mnem = ('smlabb','smlabt','smlatb','smlatt',)
 smlal_mnem = ('smlalbb','smlalbt','smlaltb','smlaltt',)
-smul_mnem = ('smulbb','smulbt','smultb','smultt',)
+smul_mnem = ('smulbb','smultb','smulbt','smultt',)  #bt and tb are backwards. Note xy bits are actually yx
 smlaw_mnem = ('smlawb','smlawt',)
 smulw_mnem = ('smulwb','smulwt',)
 
@@ -314,7 +314,7 @@ def p_misc(opval, va):
             ArmRegOper(Rm, va=va),
             ArmRegOper(Rs, va=va),
         )
-        mnem = 'smul'   #xy
+        #mnem = 'smul'   #xy  no longer needed
     #elif opval & 0x0fc00000 == 0x03200000:
         #mnem = 'msr'
     else:
@@ -429,6 +429,10 @@ def p_extra_load_store(opval, va):
     elif opval&0x0e4000f0==0x000000b0:# strh/ldrh regoffset
         # 000pu0w0-Rn--Rt-SBZ-1011-Rm-  - STRH
         # 0000u110-Rn--Rt-imm41011imm4  - STRHT (v7+)
+        # if p ==0 and w ==1 then STRHT
+        #isT = (opval >> 21) & 9 # will be a 1 if STRHT/LDRHT Need to incorporate 
+        # will replace with IF_TT tag in const.py and set when setting those flags
+        # will look into more because there are other combos too
         idx = pubwl&1
         opcode = (IENC_EXTRA_LOAD << 16) + 4 + idx
         mnem,iflags = strh_mnem[idx]
@@ -445,6 +449,7 @@ def p_extra_load_store(opval, va):
             ArmImmOffsetOper(Rn,(Rs<<4)+Rm, va, pubwl),
         )
     elif opval&0x0e5000d0==0x005000d0:# ldrsh/b immoffset
+        # if p ==0 and w ==1 then add t   v7+ see above
         idx = (opval>>5)&1
         opcode = (IENC_EXTRA_LOAD << 16) + 8 + idx
         mnem,iflags = ldrs_mnem[idx]
@@ -453,6 +458,7 @@ def p_extra_load_store(opval, va):
             ArmImmOffsetOper(Rn, (Rs<<4)+Rm, va, pubwl),
         )
     elif opval&0x0e5000d0==0x001000d0:# ldrsh/b regoffset
+        # if p ==0 and w ==1 then add t   v7+ see above
         idx = (opval>>5)&1
         opcode = (IENC_EXTRA_LOAD << 16) + 10 + idx
         mnem,iflags = ldrs_mnem[idx]
