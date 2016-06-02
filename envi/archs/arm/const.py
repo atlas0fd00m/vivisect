@@ -1,12 +1,39 @@
 MODE_ARM        = 0
 MODE_THUMB      = 1
 MODE_JAZELLE    = 2
+MODE_THUMBEE    = 3
+
+'''
+bitfields to support different versions
+For simplicity will use 0xFFFF to say all.
+Note that thumb and arm are both represented
+thumbee is shown but may never be fully implimented
+since was already depreciated
+'''
+archBitMask = [
+#    architecture   bitmask              dec     hex
+    ('THUMB16',     0b0000000000000001), # 1      1
+    ('THUMB2',      0b0000000000000010), # 2      2
+    ('THUMBEE',     0b0000000000000100), # 4      4
+    ('reserved',    0b0000000000001000), # 8      8    reserved for future usage
+    ('ARMv4',       0b0000000000010000), # 16     10
+    ('ARMv5',       0b0000000000100000), # 32     20
+    ('ARMv5T',      0b0000000001000000), # 64     40
+    ('ARMv5E',      0b0000000010000000), # 128    80
+    ('ARMv5J',      0b0000000100000000), # 256    100
+    ('ARMv6',       0b0000001000000000), # 512    200
+    ('ARMv6T2',     0b0000010000000000), # 1024   400
+    ('ARMv7M',      0b0000100000000000), # 2048   800 
+    ('ARMv7AR',     0b0001000000000000), # 4096   1000
+    ('ARMv8',       0b0010000000000000), # 8192   2000
+]
+number_of_archs = len(archBitMask)
 
 #IFLAGS - keep bottom 8-bits for cross-platform flags like envi.IF_NOFALL and envi.IF_BRFALL
 IF_PSR_S     = 1<<32     # This DP instruciton can update CPSR
 IF_B         = 1<<33     # Byte
 IF_H         = 1<<35    # HalfWord
-IF_S         = 1<<36    # Signed
+IF_S         = 1<<36    # Signed    #(not to be confused with IF_PSR_S which is the "update status" flag.
 IF_D         = 1<<37    # Dword
 IF_L         = 1<<38    # Long-store (eg. Dblword Precision) for STC
 IF_T         = 1<<39    # Translate for strCCbt
@@ -27,6 +54,20 @@ IF_VR        = 1<<52    # Adv SIMD: operation performs rounding
 IF_VD        = 1<<53    # Adv SIMD: operation doubles the result
 IF_VH        = 1<<54    # Adv SIMD: operation halves the result
 IF_SYS_MODE  = 1<<58    # instruction is encoded to be executed in SYSTEM mode, not USER mode
+IF_F32       = 1<<59    # F64 SIMD
+IF_F64       = 1<<60    # F64 SIMD
+IF_F32S32    = 1<<61    # F64 SIMD
+IF_F64S32    = 1<<62    # F64 SIMD
+IF_F32U32    = 1<<63    # F64 SIMD
+IF_F64U32    = 1<<64    # F64 SIMD
+IF_F3264     = 1<<65    # F64 SIMD
+IF_F6432     = 1<<66    # F64 SIMD
+IF_F3216     = 1<<67    # F64 SIMD
+IF_F1632     = 1<<68    # F64 SIMD
+IF_S32F64    = 1<<69    # F64 SIMD
+IF_S32F32    = 1<<70    # F64 SIMD
+IF_U32F64    = 1<<71    # F64 SIMD
+IF_U32F32    = 1<<72    # F64 SIMD
 
 OF_W         = 1<<8     # Write back to 
 OF_UM        = 1<<9     # Usermode, or if r15 included set current SPSR -> CPSR
@@ -131,10 +172,15 @@ REG_SPSR_und = REG_OFFSET_UND + 17
 REG_SPSR_sys = REG_OFFSET_SYS + 17
 
 REG_PC = 0xf
+REG_LR = 0xe
 REG_SP = 0xd
 REG_BP = None
 REG_CPSR = REG_OFFSET_CPSR
 REG_FLAGS = REG_OFFSET_CPSR    #same location, backward-compat name
+REG_EXT_S_FLAG = 0x200000
+REG_EXT_D_FLAG = 0x400000
+
+VFP_QWORD_REG_COUNT = 16    # VFPv4-D32
 
 proc_modes = { # mode_name, short_name, description, offset, mode_reg_count, PSR_offset, privilege_level
     PM_usr: ("User Processor Mode", "usr", "Normal program execution mode", REG_OFFSET_USR, 15, REG_SPSR_usr, 0),
@@ -152,8 +198,13 @@ PM_LNAME =  0
 PM_SNAME =  1
 PM_DESC =   2
 PM_REGOFF = 3
-PM_BANKED = 4
-PM_SPSR =   5
+PM_REGCNT = 4
+PM_PSROFF   = 5
+PM_PRIVLVL  = 6
+
+PSR_APSR    = 2
+PSR_SPSR    = 1
+PSR_CPSR    = 0
 
 INST_ENC_DP_IMM = 0 # Data Processing Immediate Shift
 INST_ENC_MISC   = 1 # Misc Instructions
@@ -183,6 +234,9 @@ IENC_EXTRA_LOAD   = 20 # extra load/store (swp)
 IENC_DP_MOVW      = 21 # 
 IENC_DP_MOVT      = 22 # 
 IENC_DP_MSR_IMM   = 23 # 
+IENC_LOAD_STORE_WORD_UBYTE = 24
+
+IENC_MAX        = 25
 
 # offchutes
 IENC_MEDIA_PARALLEL = ((IENC_MEDIA << 8) + 1) << 8
