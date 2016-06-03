@@ -19,10 +19,9 @@ import binascii   # temporarily included for testing purposes only - allows to p
 
 
 ''' 
-
   This dictionary will contain all commands supported by ARM to test
   Fields will contain following information:
-  archBitMask, ophex, va, repr, flags, emutests
+  archBitMask, OPHEX, VA, repr, flags, emutests
 '''
 #items commented out are either not yet implimented or raise exceptions due to bugs.
 #all errors found are commented for instruction involved
@@ -567,42 +566,15 @@ instrs = [
         (0xffff, '6745f3e0', 0x4560, 'rscs r4, r3, r7, ror #10', 0, ()) 
         ] 
         
-'''     leaving here for reference. Will be removed when tests are done
-
-        (0xfff, '7d507170', 0x4560, 'bnot #7, @er5', 0, () ),
-        (0xfff, '0832', 0x4560, 'add.b r3h, r2h', IF_B, () ),
-        (0xfff, '791d4745', 0x4560, 'add.w #4745, e5', IF_W, () ),
-        (0xfff, '0932', 0x4560, 'add.w r3, r2', IF_W, () ),
-        (0xfff, '7a1d00047145', 0x4560, 'add.l #47145, er5', IF_L, () ),
-        (0xfff, '01406930', 0x4560, 'ldc.w @er3, ccr', IF_W, () ),
-        (0xfff, '014069b0', 0x4560, 'stc.w ccr, @er3', IF_W, () ),
-        (0xfff, '01c05023', 0x4560, 'mulxs.b r2h, r3', IF_B, () ),
-        (0xfff, '01c05223', 0x4560, 'mulxs.w r2, er3', IF_W, () ),
-        (0xfff, '01d05123', 0x4560, 'divxs.b r2h, r3', IF_B, () ),
-        (0xfff, '01d05323', 0x4560, 'divxs.w r2, er3', IF_W, () ),
-        (0xfff, '01f06423', 0x4560, 'or.l er2, er3', IF_L, () ),
-        (0xfff, '01f06523', 0x4560, 'xor.l er2, er3', IF_L, () ),
-        (0xfff, '01f06623', 0x4560, 'and.l er2, er3', IF_L, () ),
-        (0xfff, '0a03', 0x4560, 'inc.b r3h', IF_B, () ),
-        (0xfff, '0a83', 0x4560, 'add.l er0, er3', IF_L, () ),
-        (0xfff, '0b83', 0x4560, 'adds #2, er3', 0, () ),
-        (0xfff, '0b93', 0x4560, 'adds #4, er3', 0, () ),
-        (0xfff, '0b53', 0x4560, 'inc.w #1, r3', IF_W, () ),
-        (0xfff, '0bf3', 0x4560, 'inc.l #2, er3', IF_L, () ),
-        (0xfff, '0f00', 0x4560, 'daa r0h', 0, () ),
-        (0xfff, '0f93', 0x4560, 'mov.l er1, er3', IF_L, () ),
-        (0xfff, '1a03', 0x4560, 'dec.b r3h', IF_B, () ),
+'''
+        leaving here for reference.
+        will remove this section once the emulation test code is started
         (0xfff, '1a83', 0x4560, 'sub.l er0, er3', IF_L, (
             {'setup':(('er0',0xaa),('CCR_C',0),('er3',0x1a)), 
                 'tests':(('er3',0x90),('CCR_H',0),('CCR_N',0),('CCR_Z',0),('CCR_V',0),('CCR_C',0)) },
             {'setup':(('er0',0xab),('CCR_C',0),('er3',0xb0)), 
                 'tests':(('er3',0xfffffffb),('CCR_H',1),('CCR_N',1),('CCR_Z',0),('CCR_V',0),('CCR_C',1)) },
             ) ),
-        ( '1b83', 0x4560, 'subs #2, er3', 0, () ),
-        ( '1b93', 0x4560, 'subs #4, er3', 0, () ),
-        ( '1b53', 0x4560, 'dec.w #1, r3', IF_W, () ),
-        ( '1bf3', 0x4560, 'dec.l #2, er3', IF_L, () ),
-        ]
 '''
 
 # temp scratch: generated these while testing
@@ -827,12 +799,15 @@ class ArmInstructionSet(unittest.TestCase):
         goodcount = 0
         for archz, bytez, va, reprOp, iflags, emutests in instrs:
             ranAlready = False  # support for run once only
-            #itterate through architectures - "mask" value is a power of 2 so set that up too
-            for arch_mask in range(number_of_archs):
-                test_arch = int(pow(2,arch_mask)) #mask for architecture to test
-                if ((not ranAlready) or (not self.armTestOnce)) and ((archz & test_arch & self.armTestVersion) != 0):
+            #itterate through architectures 
+            #for arch_mask in range(ARCH_REVSLEN): # will have to redo when architecture version dictionary is finalized for now will just run once
+            for arch_mask in range(1): # place holder for now. Run once
+                #test_arch = int(pow(2,arch_mask)) #mask for architecture to test
+                test_arch = 0 # temporary until dictionary finalized
+                #if ((not ranAlready) or (not self.armTestOnce)) and ((archz & test_arch & self.armTestVersion) != 0): # until dictionary finalized
+                if not ranAlready: # until dictionary is finalized - allows to run once
                     ranAlready = True
-                    arm.ThumbModule.archVersion = arm.ArmModule.archVersion = archBitMask[arch_mask][0]
+                    #arm.ThumbModule.archVersion = arm.ArmModule.archVersion = archBitMask[arch_mask][0]   # todo once arch dict is done
                     op = vw.arch.archParseOpcode(bytez.decode('hex'), 0, va)
                     redoprepr = repr(op).replace(' ','').lower()
                     redgoodop = reprOp.replace(' ','')
@@ -894,6 +869,7 @@ class ArmInstructionSet(unittest.TestCase):
                     else:
                         raise Exception( "FAILED emulation:  %s" % op )
                         badcount += 1
+                    '''
 
         #op = vw.arch.archParseOpcode('12c3'.decode('hex'))
         ##rotl.b #2, r3h

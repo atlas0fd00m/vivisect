@@ -218,7 +218,7 @@ def p_dp_imm_shift(opval, va):
 qop_mnem = ('qadd','qsub','qdadd','qdsub')
 smla_mnem = ('smlabb','smlabt','smlatb','smlatt',)
 smlal_mnem = ('smlalbb','smlalbt','smlaltb','smlaltt',)
-smul_mnem = ('smulbb','smultb','smulbt','smultt',)  #bt and tb are backwards. Note xy bits are actually yx
+smul_mnem = ('smulbb','smultb','smulbt','smultt',)  
 smlaw_mnem = ('smlawb','smlawt',)
 smulw_mnem = ('smulwb','smulwt',)
 
@@ -304,8 +304,8 @@ def p_misc(opval, va):
         )
     elif opval & 0x0ff00090 == 0x01600080:
         opcode = (IENC_MISC << 16) + 13
-        xy = (opval>>5)&3
-        mnem = smul_mnem[xy]
+        yx = (opval>>5)&3
+        mnem = smul_mnem[yx]
         Rd = (opval>>16) & 0xf
         Rs = (opval>>8) & 0xf
         Rm = opval & 0xf
@@ -314,7 +314,6 @@ def p_misc(opval, va):
             ArmRegOper(Rm, va=va),
             ArmRegOper(Rs, va=va),
         )
-        #mnem = 'smul'   #xy  no longer needed
     #elif opval & 0x0fc00000 == 0x03200000:
         #mnem = 'msr'
     else:
@@ -1843,7 +1842,7 @@ class ArmScaledOffsetOper(ArmOperand):
         # if U==0, subtract
         addval *= pom
 
-        addr = Rn + addval
+        addr = (Rn + addval) & e_bits.u_maxes[self.tsize]
 
         # if pre-indexed, we incremement/decrement the register before determining the OperAddr
         if (self.pubwl & 0x12 == 0x12):
