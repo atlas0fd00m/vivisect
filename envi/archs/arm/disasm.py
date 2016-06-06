@@ -188,7 +188,7 @@ def p_dp_imm_shift(opval, va):
     ocode,sflag,Rn,Rd = dpbase(opval)
     Rm = opval & 0xf
     shtype = (opval >> 5) & 0x3
-    shval = (opval >> 7) & 0x1e   # effectively, rot*2
+    shval = (opval >> 7) & 0x1f   # effectively, rot*2
 
     if ocode in dp_noRn:# FIXME: FUGLY (and slow...)
         olist = (
@@ -218,7 +218,7 @@ def p_dp_imm_shift(opval, va):
 qop_mnem = ('qadd','qsub','qdadd','qdsub')
 smla_mnem = ('smlabb','smlabt','smlatb','smlatt',)
 smlal_mnem = ('smlalbb','smlalbt','smlaltb','smlaltt',)
-smul_mnem = ('smulbb','smulbt','smultb','smultt',)
+smul_mnem = ('smulbb','smultb','smulbt','smultt',)  
 smlaw_mnem = ('smlawb','smlawt',)
 smulw_mnem = ('smulwb','smulwt',)
 
@@ -304,8 +304,8 @@ def p_misc(opval, va):
         )
     elif opval & 0x0ff00090 == 0x01600080:
         opcode = (IENC_MISC << 16) + 13
-        xy = (opval>>5)&3
-        mnem = smul_mnem[xy]
+        yx = (opval>>5)&3
+        mnem = smul_mnem[yx]
         Rd = (opval>>16) & 0xf
         Rs = (opval>>8) & 0xf
         Rm = opval & 0xf
@@ -314,7 +314,6 @@ def p_misc(opval, va):
             ArmRegOper(Rm, va=va),
             ArmRegOper(Rs, va=va),
         )
-        mnem = 'smul'   #xy
     #elif opval & 0x0fc00000 == 0x03200000:
         #mnem = 'msr'
     else:
@@ -429,6 +428,10 @@ def p_extra_load_store(opval, va):
     elif opval&0x0e4000f0==0x000000b0:# strh/ldrh regoffset
         # 000pu0w0-Rn--Rt-SBZ-1011-Rm-  - STRH
         # 0000u110-Rn--Rt-imm41011imm4  - STRHT (v7+)
+        # if p ==0 and w ==1 then STRHT
+        #isT = (opval >> 21) & 9 # will be a 1 if STRHT/LDRHT Need to incorporate 
+        # will replace with IF_TT tag in const.py and set when setting those flags
+        # will look into more because there are other combos too
         idx = pubwl&1
         opcode = (IENC_EXTRA_LOAD << 16) + 4 + idx
         mnem,iflags = strh_mnem[idx]
@@ -445,6 +448,7 @@ def p_extra_load_store(opval, va):
             ArmImmOffsetOper(Rn,(Rs<<4)+Rm, va, pubwl),
         )
     elif opval&0x0e5000d0==0x005000d0:# ldrsh/b immoffset
+        # if p ==0 and w ==1 then add t   v7+ see above
         idx = (opval>>5)&1
         opcode = (IENC_EXTRA_LOAD << 16) + 8 + idx
         mnem,iflags = ldrs_mnem[idx]
@@ -453,6 +457,7 @@ def p_extra_load_store(opval, va):
             ArmImmOffsetOper(Rn, (Rs<<4)+Rm, va, pubwl),
         )
     elif opval&0x0e5000d0==0x001000d0:# ldrsh/b regoffset
+        # if p ==0 and w ==1 then add t   v7+ see above
         idx = (opval>>5)&1
         opcode = (IENC_EXTRA_LOAD << 16) + 10 + idx
         mnem,iflags = ldrs_mnem[idx]
@@ -568,7 +573,7 @@ def p_mult(opval, va):
 def p_dp_imm(opval, va):
     ocode,sflag,Rn,Rd = dpbase(opval)
     imm = opval & 0xff
-    rot = (opval >> 7) & 0x1e   # effectively, rot*2
+    rot = (opval >> 7) & 0x1f   # effectively, rot*2
     
     # hack to make add/sub against PC more readable (also legit for ADR instruction)
     if Rn == REG_PC and ocode in dp_ADR:    # we know PC
@@ -1778,9 +1783,6 @@ class ArmScaledOffsetOper(ArmOperand):
         self.shval = shval
         self.pubwl = pubwl
         self.va = va
-
-        b = (self.pubwl >> 2) & 1
-        self.tsize = (4,1)[b]
         #print "TESTME: ArmScaledOffsetOper at 0x%x" % va
 
     def __eq__(self, oper):
@@ -1809,22 +1811,27 @@ class ArmScaledOffsetOper(ArmOperand):
             return None
 
         addr = self.getOperAddr(op, emu)
-        return emu.writeMemValue(addr, val, self.tsize)
+        b = (self.pubwl >> 2) & 1
+        tsize = (4,1)[b]
+        return emu.writeMemValue(addr, val, tsize)
 
     def getOperValue(self, op, emu=None):
         if emu == None:
             return None
 
         addr = self.getOperAddr(op, emu)
-        return emu.readMemValue(addr, self.tsize)
+        b = (self.pubwl >> 2) & 1
+        tsize = (4,1)[b]
+        return emu.readMemValue(addr, tsize)
 
     def setOperValue(self, op, emu=None, val=None):
         # can't survive without an emulator
         if emu == None:
             return None
 
+        b = (self.pubwl >> 2) & 1
         addr = self.getOperAddr(op, emu)
-        emu.writeMemValue(addr, val, self.tsize)
+        emu.writeMemValue(addr, val, (4,1)[b])
 
     def getOperAddr(self, op, emu=None):
         if emu == None:
@@ -1837,7 +1844,7 @@ class ArmScaledOffsetOper(ArmOperand):
         # if U==0, subtract
         addval *= pom
 
-        addr = (Rn + addval) & e_bits.u_maxes[self.tsize]
+        addr = Rn + addval
 
         # if pre-indexed, we incremement/decrement the register before determining the OperAddr
         if (self.pubwl & 0x12 == 0x12):
@@ -1905,9 +1912,6 @@ class ArmRegOffsetOper(ArmOperand):
         self.base_reg = base_reg
         self.offset_reg = offset_reg
         self.pubwl = pubwl
-
-        b = (self.pubwl >> 2) & 1
-        self.tsize = (4,1)[b]
         print "TESTME: ArmRegOffsetOper at 0x%x" % va
 
     def __eq__(self, oper):
@@ -1932,14 +1936,18 @@ class ArmRegOffsetOper(ArmOperand):
             return None
 
         addr = self.getOperAddr(op, emu)
-        return emu.writeMemValue(addr, val, self.tsize)
+        b = (self.pubwl >> 2) & 1
+        tsize = (4,1)[b]
+        return emu.writeMemValue(addr, val, tsize)
 
     def getOperValue(self, op, emu=None):
         if emu == None:
             return None
 
         addr = self.getOperAddr(op, emu)
-        return emu.readMemValue(addr, self.tsize)
+        b = (self.pubwl >> 2) & 1
+        tsize = (4,1)[b]
+        return emu.readMemValue(addr, tsize)
 
     # FIXME: should identify whether we're in an emulator or being "analyzed".  should be forcible either way, but defaults should be to update in emulator.executeOpcode() and not in other
     def getOperAddr(self, op, emu=None):
@@ -1950,8 +1958,10 @@ class ArmRegOffsetOper(ArmOperand):
         pom = (-1, 1)[(self.pubwl>>3)&1]
         rn = emu.getRegister( self.base_reg )
         rm = emu.getRegister( self.offset_reg )
+        addr = rn + (pom*rm)
 
-        addr = rn + (pom*rm) & e_bits.u_maxes[self.tsize]
+        b = (self.pubwl >> 2) & 1
+        tsize = (4,1)[b]
 
         # if pre-indexed, we incremement/decrement the register before determining the OperAddr
         if (self.pubwl & 0x12 == 0x12):     # pre-indexed...
@@ -2011,9 +2021,6 @@ class ArmImmOffsetOper(ArmOperand):
         self.pubwl = pubwl
         self.va = va
 
-        b = (pubwl >> 2) & 1
-        self.tsize = (4,1)[b]
-
     def __eq__(self, oper):
         if not isinstance(oper, self.__class__):
             return False
@@ -2036,19 +2043,27 @@ class ArmImmOffsetOper(ArmOperand):
         if emu == None:
             return None
 
-        addr = self.getOperAddr(op, emu)
-        val &= e_bits.u_maxes[self.tsize]
+        pubwl = self.pubwl >> 2
+        b = pubwl & 1
 
-        emu.writeMemValue(addr, val, self.tsize)
+        addr = self.getOperAddr(op, emu)
+
+        fmt = ("<I", "B")[b]
+        val &= (0xffffffff, 0xff)[b]
+        emu.writeMemoryFormat(addr, fmt, val)
 
     def getOperValue(self, op, emu=None):
         # can't survive without an emulator
         if emu == None:
             return None
 
+        pubwl = self.pubwl >> 2
+        b = pubwl & 1
+
         addr = self.getOperAddr(op, emu)
 
-        ret = emu.readMemValue(addr, self.tsize)
+        fmt = ("<I", "B")[b]
+        ret, = emu.readMemoryFormat(addr, fmt)
         return ret
 
     def getOperAddr(self, op, emu=None):
@@ -2065,9 +2080,9 @@ class ArmImmOffsetOper(ArmOperand):
             base = emu.getRegister(self.base_reg)
 
         if u:
-            addr = (base + self.offset) & e_bits.u_maxes[self.tsize]
+            addr = base + self.offset
         else:
-            addr = (base - self.offset) & e_bits.u_maxes[self.tsize]
+            addr = base - self.offset
 
         
         if (self.pubwl & 0x12) == 0x12:    # pre-indexed
@@ -2631,7 +2646,6 @@ class ArmDisasm:
             raise envi.InvalidInstruction(mesg="No encoding found!",
                     bytez=bytez[offset:offset+4], va=va)
 
-        #print "ienc_parser index: %d" % enc
         opcode, mnem, olist, flags = ienc_parsers[enc](opval, va+8)
 
         return opcode, mnem, olist, flags
