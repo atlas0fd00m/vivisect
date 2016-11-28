@@ -329,7 +329,7 @@ class VivWorkspaceCore(object,viv_impapi.ImportApi):
         va, etype, name, filename = einfo
         self.exports.append(einfo)
         self.exports_by_va[va] = einfo
-        fullname = "%s.%s" % (filename,name)
+        fullname = "%s.%s_%x" % (filename,name,va)
         self.makeName(va, fullname)
 
     def _handleSETMETA(self, einfo):
@@ -532,6 +532,18 @@ class VivWorkspaceCore(object,viv_impapi.ImportApi):
     #def _loadImportApi(self, apidict):
         #self._imp_api.update( apidict )
 
+    def getEndian(self):
+        return self.bigend
+
+    def setEndian(self, endian):
+        self.bigend = endian
+        for arch in self.imem_archs:
+            arch.setEndian(self.bigend)
+
+        if self.arch != None:
+            self.arch.setEndian(self.bigend)
+
+
 #################################################################
 #
 #  setMeta key callbacks
@@ -551,8 +563,7 @@ class VivWorkspaceCore(object,viv_impapi.ImportApi):
             self.setMeta('DefaultCall', defcall)
 
     def _mcb_bigend(self, name, value):
-        print('OH HAI')
-        self.bigend = bool(value)
+        self.setEndian(bool(value))
 
     def _mcb_Platform(self, name, value):
         # Default calling convention for platform
