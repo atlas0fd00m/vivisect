@@ -35,10 +35,10 @@ class lst_parser(object):
 
     def __init__(self):
         token_spec = [
-            ('SECTION32',    r'^[0-9A-Za-z_.]+:[0-9A-Fa-f]{8}'),
             ('SECTION64',    r'^[0-9A-Za-z_.]+:[0-9A-Fa-f]{16}'),
-            ('ADDR32',       r'^[0-9A-Fa-f]{8}'),
+            ('SECTION32',    r'^[0-9A-Za-z_.]+:[0-9A-Fa-f]{8}'),
             ('ADDR64',       r'^[0-9A-Fa-f]{16}'),
+            ('ADDR32',       r'^[0-9A-Fa-f]{8}'),
             ('BYTES',        r' [0-9A-Fa-f]{2} [0-9A-Fa-f]{2}(?: [0-9A-Fa-f]{2} [0-9A-Fa-f]{2}| {6})?'),
             ('DATA',         r'\.(?:byte|short|dword|qword)'),
             ('STRUCTDATA',   r' {17}[a-zA-Z][0-9A-Za-z_.]+ +<[x0-9A-Fa-f, ]+>'),
@@ -282,26 +282,21 @@ class ppc_instr(object):
         arg_list = ''
         if self.args:
             if self.args[-1].type == 'INDIRECT_REF':
-                arg_list = ', '.join([str(a.value) for a in self.args[:-1]]) + self.args[-1].value
+                arg_list = ' ' + ', '.join([str(a.value) for a in self.args[:-1]]) + self.args[-1].value
             else:
-                arg_list = ', '.join([str(a.value) for a in self.args])
-            
-        return str((self.data.match, self.op.value + ' ' + arg_list))
+                arg_list = ' ' + ', '.join([str(a.value) for a in self.args])
+
+        return str((self.data.match, self.op.value + arg_list))
 
     def __str__(self):
         arg_list = ''
         if self.args:
             if self.args[-1].type == 'INDIRECT_REF':
-                arg_list = ', '.join([str(a.value) for a in self.args[:-1]]) + self.args[-1].value
+                arg_list = ' ' + ', '.join([str(a.value) for a in self.args[:-1]]) + self.args[-1].value
             else:
-                arg_list = ', '.join([str(a.value) for a in self.args])
-            fmt = '{0.data.match: <8} {0.op.value} {1}'
-            instr = fmt.format(self, arg_list)
+                arg_list = ' ' + ', '.join([str(a.value) for a in self.args])
 
-        else:
-            fmt = '{0.data.match: <8} {0.op.value}'
-            instr = fmt.format(self)
-
+        fmt = '{0.data.match: <8} {0.op.value}{1}'
         return fmt.format(self, arg_list)
 
     @classmethod
