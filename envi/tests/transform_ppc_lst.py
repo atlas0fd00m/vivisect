@@ -282,9 +282,9 @@ class ppc_instr(object):
         arg_list = ''
         if self.args:
             if self.args[-1].type == 'INDIRECT_REF':
-                arg_list = ' ' + ', '.join([str(a.value) for a in self.args[:-1]]) + self.args[-1].value
+                arg_list = ' ' + ','.join([str(a.value) for a in self.args[:-1]]) + self.args[-1].value
             else:
-                arg_list = ' ' + ', '.join([str(a.value) for a in self.args])
+                arg_list = ' ' + ','.join([str(a.value) for a in self.args])
 
         return str((self.data.match, self.op.value + arg_list))
 
@@ -292,9 +292,9 @@ class ppc_instr(object):
         arg_list = ''
         if self.args:
             if self.args[-1].type == 'INDIRECT_REF':
-                arg_list = ' ' + ', '.join([str(a.value) for a in self.args[:-1]]) + self.args[-1].value
+                arg_list = ' ' + ','.join([str(a.value) for a in self.args[:-1]]) + self.args[-1].value
             else:
-                arg_list = ' ' + ', '.join([str(a.value) for a in self.args])
+                arg_list = ' ' + ','.join([str(a.value) for a in self.args])
 
         fmt = '{0.data.match: <8} {0.op.value}{1}'
         return fmt.format(self, arg_list)
