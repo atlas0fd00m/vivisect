@@ -161,13 +161,13 @@ class PpcRegOper(envi.RegisterOper):
 class PpcFRegOper(PpcRegOper):
     ''' Floating Point register operand.'''
     def __init__(self, reg, va=0, tsize=4):
-        reg += REG_IDX_FP
+        reg += REG_OFFSET_FLOAT
         PpcRegOper.__init__(self, reg, va, tsize)
         
 class PpcVRegOper(PpcRegOper):
     ''' Vector register operand.'''
     def __init__(self, reg, va=0, tsize=4):
-        reg += REG_IDX_VECTOR
+        reg += REG_OFFSET_VECTOR
         PpcRegOper.__init__(self, reg, va, tsize)
         
 class PpcCRegOper(PpcRegOper):
@@ -178,12 +178,10 @@ class PpcCRegOper(PpcRegOper):
         self.field = field
         
     def render(self, mcanv, op, idx):
-        #rname = ppc_regs[self.reg][0]
         rname = "cr%d" % self.field
         mcanv.addNameText(rname, typename='cregisters')
 
     def repr(self, op):
-        #rname = ppc_regs[self.reg][0]
         rname = "cr%d" % self.field
         return rname
 
@@ -204,7 +202,6 @@ class PpcCBRegOper(PpcRegOper):
         self.bit = bit
         
     def render(self, mcanv, op, idx):
-        #rname = ppc_regs[self.reg][0]
         creg = self.bit / 4
         coff = self.bit % 4
         name = "cr%d" % (creg)
@@ -212,7 +209,6 @@ class PpcCBRegOper(PpcRegOper):
         mcanv.addNameText(rname, name=name, typename='cregisters')
 
     def repr(self, op):
-        #rname = ppc_regs[self.reg][0]
         creg = self.bit / 4
         coff = self.bit % 4
         rname = "cr%d.%s" % (creg, CRBITS[coff])
@@ -302,10 +298,15 @@ class PpcSImm16Oper(PpcSImmOper):
     def __init__(self, val, va=0, tsize=4):
         PpcSImmOper.__init__(self, val, va, 16, tsize)
 
+class PpcSImm3Oper(PpcSImmOper):
+    ''' Signed Immediate operand. '''
+    def __init__(self, val, va=0, tsize=4):
+        val = e_bits.signed(val * 4, 2)
+        PpcSImmOper.__init__(self, val, va, tsize)
+
 class PpcUImmOper(PpcImmOper):
     ''' Unsigned Immediate operand. '''
     def __init__(self, val, va=0, tsize=4):
-        self.val = val
         PpcImmOper.__init__(self, val, va, tsize)
 
 class PpcUImm1Oper(PpcUImmOper):
@@ -325,12 +326,6 @@ class PpcUImm3Oper(PpcUImmOper):
     def __init__(self, val, va=0, tsize=4):
         val *= 4
         PpcUimmOper.__init__(self, val, va, tsize)
-
-class PpcSImm3Oper(PpcSImmOper):
-    ''' Signed Immediate operand. '''
-    def __init__(self, val, va=0, tsize=4):
-        val = e_bits.signed(val * 4, 2)
-        PpcSImmOper.__init__(self, val, va, tsize)
 
 
 class PpcMemOper(envi.DerefOper):
@@ -578,7 +573,7 @@ OPERCLASSES = {
     FIELD_TMRN0_4 : PpcImmOper,
     FIELD_TMRN5_9 : PpcImmOper,
     FIELD_TO : PpcImmOper,
-    FIELD_UIMM : PpcImmOper,
+    FIELD_UIMM : PpcUImmOper,
     FIELD_UIMM1 : PpcUImm1Oper,
     FIELD_UIMM2 : PpcUImm2Oper,
     FIELD_UIMM3 : PpcUImm3Oper,

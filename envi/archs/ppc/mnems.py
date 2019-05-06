@@ -11149,10 +11149,11 @@ def buildOutput():
     out.append('inscounter = 0\nfor mnem in mnems:\n    globals()["INS_"+mnem.upper()] = inscounter\n    inscounter += 1\n')
     out.append('')
     out.append('IF_NONE = 0')
-    out.append('IF_RC  \t\t\t= 1<<8')
-    out.append('IF_ABS \t\t\t = 1<<9')
-    out.append('IF_BRANCH_LIKELY\t\t\t = 1<<10')
-    out.append('IF_BRANCH_UNLIKELY\t\t\t = 1<<11')
+    out.append('IF_RC = 1<<8')
+    out.append('IF_ABS = 1<<9')
+    out.append('IF_BRANCH_LIKELY = 1<<10')
+    out.append('IF_BRANCH_UNLIKELY = 1<<11')
+    out.append('')
 
     # now build the instruction tables.
     out2 = []
@@ -11248,6 +11249,9 @@ def buildOutput():
 
                 if mnem in ('ba', 'bca', 'bla', 'bcla',):
                     iflags.append('IF_ABS')
+
+            elif mnem.startswith('rf'):
+                iflags.append('envi.IF_RET | envi.IF_NOFALL')
 
             if not len(iflags):
                 iflags.append("IF_NONE")

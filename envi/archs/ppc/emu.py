@@ -1,3 +1,5 @@
+# -*- coding: iso-8859-15 -*-
+
 import sys
 
 import envi
@@ -13,6 +15,21 @@ from const import *
 from disasm import *
 from envi.archs.ppc import *
 
+'''
+PowerPC Emulation code.  most of this code is written based on the information from the 
+EREF, Rev. 1 (EIS 2.1)  
+(aka EREF_RM.pdf from http://cache.freescale.com/files/32bit/doc/ref_manual/EREF_RM.pdf)
+
+that documentation is specific, and generally good, with one Major exception:  
+    they think that 0 is the Most Significant Bit!
+
+this convention flies in the face of most other architecture reference manuals, and the
+way that the authors of this module themselves, think of bit numbering for instructions.
+therefore, some places may seem a little confusing if compared to the EREF.
+
+MASK and ROTL32 have specifically been coded to allow the emulated instructions to map 
+directly to the EREF docs execution pseudocode.
+'''
 
 MCU_START       = 0x0000
 IV_EXT0         = 0x0003
@@ -24,7 +41,7 @@ INTVECTOR_4     = 0x0023
 
 class PpcCall(envi.CallingConvention):
     '''
-    Does not have shadow space like MSx64.
+    PowerPC Calling Convention.  
     '''
     arg_def = [(CC_REG, REG_R3 + x) for x in range(7)]
     arg_def.append((CC_STACK_INF, 8))
@@ -47,20 +64,35 @@ print "PPC:Emu: TESTME: cmpli bit setting of the appropriate CR register"
 class Trap(Exception):
     pass
 
-class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
+def MASK(b, e):
+    '''
+    helper to create masks.
+    NOTE: THIS IS IN NXP's WARPED VIEW ON BIT NUMBERING!
+    lsb = bit 63!!!
+    '''
+    delta = e - b
+    real_shift = 63 - e
+    return e_bits.bu_maxes[delta] << (real_shift)
+
+def ROTL32(x, y):
+    '''
+    helper to rotate left, 32-bit stype.
+    NOTE: THIS IS IN NXP's WARPED VIEW ON BIT NUMBERING!
+    lsb = bit 63!!!
+    '''
+    x |= (x<<32)
+    return x << 7
+    
+class PpcAbstractEmulator(PpcRegisterContext, envi.Emulator):
 
     def __init__(self, archmod=None, psize=4):
         self.psize = psize
-        if archmod == None:
-            archmod = PpcModule()
         envi.Emulator.__init__(self, archmod=archmod)
                 
         PpcRegisterContext.__init__(self)
-        PpcModule.__init__(self)
 
         self.addCallingConvention("ppccall", ppccall)
 
-    
     def undefFlags(self):
         """
         Used in PDE.
@@ -253,8 +285,18 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
 
     ########################### Metric shit-ton of Branch Instructions #############################
     def i_b(self, op):
-        val = op.opers[OPER_DST].getOperValue(op, self)
+        '''
+        Branch!  no frills.
+        '''
+        val = self.getOperValue(op, OPER_DST)
         return val
+
+    def i_bl(self, op):
+        '''
+        branch with link, the basic CALL instruction
+        '''
+        self.setRegister(REG_LR, op.va + 4)
+        return self.getOperValue(op, 0)
 
     def i_blr(self, op):
         '''
@@ -262,31 +304,77 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         '''
         return self.getRegister(REG_LR)
 
+    def i_bctrl(self, op):
+        nextva = op.va + len(op)
+        ctr  = self.getRegister(REG_CTR)
+        self.setRegister(REG_LR, nextva)
+        return ctr
+
+
     # conditional branches....
-    def i_bc(self, op):
-        val = op.opers[OPER_DST].getOperValue(op, self)
-        return val
+    def i_bc(self, op, aa=False, lk=False, tgtreg=None):
+        bo = self.getOperValue(op, 0)
+        bi = self.getOperValue(op, 1)
+        nextva = op.va + len(op)
+        ctr = self.getRegister(REG_CTR)
+        cr = self.getRegister(REG_CR)
+
+        # if we provide a tgtreg, it's an  instruction-inherent register (eg. bclr)
+        if tgtreg is None:
+            tgt = self.getOperValue(op, 2)
+        else:
+            tgt = self.getRegister(tgtreg)
+
+        bo_0 = bo & 0x10
+        bo_1 = bo & 0x8
+        bo_2 = bo & 0x4
+        bo_3 = bo & 0x2
+        crmask = 1 << (32 - bi)
+
+        # if tgtreg is REG_CTR, we can't decrement it...
+        if not bo_2 and tgtreg != REG_CTR:
+            ctr -= 1
+            self.setRegister(REG_CTR, ctr)
+
+        # ctr_ok ← BO2 | ((CTRm:63 ≠ 0) ⊕ BO3)
+        ctr_ok = bool(bo_2)
+        if not ctr_ok:
+            if (ctr & e_bits.u_maxes[self.psize]) != 0 and not bo_3: ctr_ok = True
+            elif (not (ctr & e_bits.u_maxes[self.psize]) != 0) and bo_3: ctr_ok = True
+
+        # cond_ok = BO0 | (CRBI+32 ≡ BO1)
+        cond_ok = bo_0 or (bool(cr & crmask) == bool(bo_1))
+
+        # always update LR, regardless of the conditions.  odd.
+        if lk:
+            self.setRegister(REG_LR, nextva)
+
+        # if we don't meet the requirements, bail
+        if not (ctr_ok and cond_ok):
+            return
+
+        # if we meet the required conditions:
+        if not aa:  # if *not* ABSOLUTE address
+            tgt += nextva
+
+        return tgt
 
     def i_bca(self, op):
-        val = op.opers[OPER_DST].getOperValue(op, self)
-        return val
+        return self.i_bc(op, aa=True)
 
     def i_bcl(self, op):
-        val = op.opers[OPER_DST].getOperValue(op, self)
-        return val
+        return self.i_bc(op, lk=True)
 
     def i_bcla(self, op):
-        val = op.opers[OPER_DST].getOperValue(op, self)
-        return val
+        return self.i_bc(op, aa=True, lk=True)
 
     def i_bclr(self, op):
-        val = op.opers[OPER_DST].getOperValue(op, self)
-        return val
+        return self.i_bc(op, aa=True, lk=True, tgtreg=REG_LR)
 
     def i_bcctr(self, op):
-        val = op.opers[OPER_DST].getOperValue(op, self)
-        return val
+        return self.i_bc(op, aa=True, lk=True, tgtreg=REG_CTR)
 
+    # bc breakdowns:  decrement, zero/not-zero, true/false, w/link, etc...
     def i_bdnzf(self, op):
         if len(op.opers) != 2:
             print("%s doesn't have 2 opers: %r" % (op.mnem, op.opers))
@@ -366,30 +454,24 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         return self.getOperValue(op, 1)
 
     def i_bdnz(self, op):
-        if len(op.opers) != 2:
-            print("%s doesn't have 2 opers: %r" % (op.mnem, op.opers))
-
         ctr = self.getRegister(REG_CTR)
         ctr -= 1
         self.setRegister(REG_CTR, ctr)
         if ctr == 0:
             return
 
-        return self.getOperValue(op, 1)
+        return self.getOperValue(op, 0)
 
     def i_bdz(self, op):
-        if len(op.opers) != 2:
-            print("%s doesn't have 2 opers: %r" % (op.mnem, op.opers))
-
         ctr = self.getRegister(REG_CTR)
         ctr -= 1
         self.setRegister(REG_CTR, ctr)
         if ctr != 0:
             return
 
-        return self.getOperValue(op, 1)
+        return self.getOperValue(op, 0)
 
-
+    # with link...
     def i_bdnzfl(self, op):
         if len(op.opers) != 2:
             print("%s doesn't have 2 opers: %r" % (op.mnem, op.opers))
@@ -403,7 +485,7 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         if self.getOperValue(op, 0):
             return
 
-        self.doPush(op.va + 4)
+        self.setRegister(REG_LR, op.va + 4)
         return self.getOperValue(op, 1)
            
     def i_bdzfl(self, op):
@@ -419,7 +501,7 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         if self.getOperValue(op, 0):
             return
 
-        self.doPush(op.va + 4)
+        self.setRegister(REG_LR, op.va + 4)
         return self.getOperValue(op, 1)
 
     def i_bfl(self, op):
@@ -429,7 +511,7 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         if self.getOperValue(op, 0):
             return
 
-        self.doPush(op.va + 4)
+        self.setRegister(REG_LR, op.va + 4)
         return self.getOperValue(op, 1)
 
     def i_bdnztl(self, op):
@@ -445,7 +527,7 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         if not self.getOperValue(op, 0):
             return
 
-        self.doPush(op.va + 4)
+        self.setRegister(REG_LR, op.va + 4)
         return self.getOperValue(op, 1)
            
     def i_bdztl(self, op):
@@ -461,7 +543,7 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         if not self.getOperValue(op, 0):
             return
 
-        self.doPush(op.va + 4)
+        self.setRegister(REG_LR, op.va + 4)
         return self.getOperValue(op, 1)
            
     def i_btl(self, op):
@@ -471,7 +553,7 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         if not self.getOperValue(op, 0):
             return
 
-        self.doPush(op.va + 4)
+        self.setRegister(REG_LR, op.va + 4)
         return self.getOperValue(op, 1)
 
     def i_bdnzl(self, op):
@@ -484,7 +566,7 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         if ctr == 0:
             return
 
-        self.doPush(op.va + 4)
+        self.setRegister(REG_LR, op.va + 4)
         return self.getOperValue(op, 1)
 
     def i_bdzl(self, op):
@@ -497,13 +579,9 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         if ctr != 0:
             return
 
-        self.doPush(op.va + 4)
+        self.setRegister(REG_LR, op.va + 4)
         return self.getOperValue(op, 1)
 
-
-    def i_bl(self, op):
-        self.doPush(op.va + 4)
-        return self.getOperValue(op, 0)
 
     i_bdnzfa = i_bdnzf
     i_bdzfa = i_bdzf
@@ -556,13 +634,10 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         return self.getOperValue(op, 1)
 
     def i_bflr(self, op):
-        if len(op.opers) != 2:
-            print("%s doesn't have 2 opers: %r" % (op.mnem, op.opers))
-
         if self.getOperValue(op, 0):
             return
 
-        return self.getOperValue(op, 1)
+        return self.getRegister(REG_LR)
 
     def i_bdnztlr(self, op):
         if len(op.opers) != 2:
@@ -595,13 +670,10 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         return self.getOperValue(op, 1)
            
     def i_btlr(self, op):
-        if len(op.opers) != 2:
-            print("%s doesn't have 2 opers: %r" % (op.mnem, op.opers))
-
         if not self.getOperValue(op, 0):
             return
 
-        return self.getOperValue(op, 1)
+        return self.getRegister(REG_LR)
 
     def i_bdnzlr(self, op):
         if len(op.opers) != 2:
@@ -641,8 +713,9 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         if self.getOperValue(op, 0):
             return
 
-        self.doPush(op.va + 4)
-        return self.getOperValue(op, 1)
+        tgt = self.getRegister(REG_LR)
+        self.setRegister(REG_LR, op.va + 4)
+        return tgt
            
     def i_bdzflrl(self, op):
         if len(op.opers) != 2:
@@ -657,18 +730,17 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         if self.getOperValue(op, 0):
             return
 
-        self.doPush(op.va + 4)
-        return self.getOperValue(op, 1)
+        tgt = self.getRegister(REG_LR)
+        self.setRegister(REG_LR, op.va + 4)
+        return tgt
 
     def i_bflrl(self, op):
-        if len(op.opers) != 2:
-            print("%s doesn't have 2 opers: %r" % (op.mnem, op.opers))
-
         if self.getOperValue(op, 0):
             return
 
-        self.doPush(op.va + 4)
-        return self.getOperValue(op, 1)
+        tgt = self.getRegister(REG_LR)
+        self.setRegister(REG_LR, op.va + 4)
+        return tgt
 
     def i_bdnztlrl(self, op):
         if len(op.opers) != 2:
@@ -683,8 +755,9 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         if not self.getOperValue(op, 0):
             return
 
-        self.doPush(op.va + 4)
-        return self.getOperValue(op, 1)
+        tgt = self.getRegister(REG_LR)
+        self.setRegister(REG_LR, op.va + 4)
+        return tgt
            
     def i_bdztlrl(self, op):
         if len(op.opers) != 2:
@@ -699,18 +772,17 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         if not self.getOperValue(op, 0):
             return
 
-        self.doPush(op.va + 4)
-        return self.getOperValue(op, 1)
+        tgt = self.getRegister(REG_LR)
+        self.setRegister(REG_LR, op.va + 4)
+        return tgt
            
     def i_btlrl(self, op):
-        if len(op.opers) != 2:
-            print("%s doesn't have 2 opers: %r" % (op.mnem, op.opers))
-
         if not self.getOperValue(op, 0):
             return
 
-        self.doPush(op.va + 4)
-        return self.getOperValue(op, 1)
+        tgt = self.getRegister(REG_LR)
+        self.setRegister(REG_LR, op.va + 4)
+        return tgt
 
     def i_bdnzlrl(self, op):
         if len(op.opers) != 2:
@@ -722,8 +794,9 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         if ctr == 0:
             return
 
-        self.doPush(op.va + 4)
-        return self.getOperValue(op, 1)
+        tgt = self.getRegister(REG_LR)
+        self.setRegister(REG_LR, op.va + 4)
+        return tgt
 
     def i_bdzlrl(self, op):
         if len(op.opers) != 2:
@@ -735,13 +808,15 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         if ctr != 0:
             return
 
-        self.doPush(op.va + 4)
-        return self.getOperValue(op, 1)
+        tgt = self.getRegister(REG_LR)
+        self.setRegister(REG_LR, op.va + 4)
+        return tgt
 
 
     def i_blrl(self, op):
-        self.doPush(op.va + 4)
-        return self.getOperValue(op, 0)
+        tgt = self.getRegister(REG_LR)
+        self.setRegister(REG_LR, op.va + 4)
+        return tgt
 
     i_bdnzfa = i_bdnzflr
     i_bdzfa = i_bdzflr
@@ -896,7 +971,7 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         self.setRegister(REG_SO, so)
         self.setRegister(REG_OV, ov)
 
-    def i_add(self, op):
+    def i_add(self, op, oe=False):
         '''
         add
         '''
@@ -905,46 +980,42 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         src2 = e_bits.signed(src2, 2)
         result = src1 + src2
         self.setOperValue(op, 0, result)
+        if oe: self.setOEFlags(result)
         if op.iflags & IF_RC: self.setFlags(result, 0)
 
     def i_addo(self, op):
-        '''
-        add
-        '''
-        src1 = self.getOperValue(op, 1)
-        src2 = self.getOperValue(op, 2) # FIXME: move signedness here instead of at decode
-        src2 = e_bits.signed(src2, 2)
-        result = src1 + src2
-        self.setOperValue(op, 0, result)
-        self.setOEFlags(result)
-        if op.iflags & IF_RC: self.setFlags(result, 0)
+        return self.i_add(op, oe=True)
 
-    def i_addc(self, op):
+    def i_addc(self, op, oe=False):
         '''
         add
         '''
         src1 = self.getOperValue(op, 1)
         src2 = self.getOperValue(op, 2) # FIXME: move signedness here instead of at decode
         src2 = e_bits.signed(src2, 2)
+
         result = src1 + src2
+        
         self.setOperValue(op, 0, result)
         if op.iflags & IF_RC: self.setFlags(result, 0)
+        if oe: self.setOEFlags(result)
 
     def i_addco(self, op):
-        '''
-        add
-        '''
-        src1 = self.getopervalue(op, 1)
-        src2 = self.getopervalue(op, 2) # fixme: move signedness here instead of at decode
-        src2 = e_bits.signed(src2, 2)
-        carry = self.getRegister(REG_CA)
-        
-        result = src1 + src2 + carry
-        self.setopervalue(op, 0, result)
+        return self.i_addc(op, oe=True)
 
-        self.setOEFlags(result)
-        if op.iflags & if_rc: self.setflags(result, 0)
+    def i_adde(self, op, oe=False):
+        ra = self.getOperValue(op, 1)
+        rb = self.getOperValue(op, 2)
+        ca = self.getRegister(REG_CA)
 
+        result = ra + rb + ca
+
+        if oe: self.setOEflags(result, self.psize, ra, rb + ca)
+        if op.iflags & IF_RC: self.setFlags(result, 0)
+        self.setOperValue(op, 0, result)
+
+    def i_addeo(self, op):
+        return self.i_adde(op, oe=True)
 
     def i_addi(self, op):
         '''
@@ -1048,7 +1119,59 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
 
         self.setOperValue(op, 0, result)
         self.setFlags(result, 0, SO)
-   
+  
+    def i_and(self, op):
+        dst = self.getOperValue(op, 0)
+        src = self.getOperValue(op, 1)
+        # PDE
+        if dst == None or src == None:
+            self.undefFlags()
+            op.opers[OPER_DST].setOperValue(op, self, None)
+            return
+
+        result = (dst & src)
+
+        self.setOperValue(op, 0, result)
+        if op.iflags & IF_RC: self.setFlags(result, 0)
+
+    i_andi = i_and
+
+    def i_andis(self, op):
+        '''
+        and immediate shifted
+        '''
+        src1 = self.getOperValue(op, 1)
+        src2 = self.getOperValue(op, 2) # FIXME: move signedness here instead of at decode
+        # PDE
+        if src1 == None or src2 == None:
+            self.undefFlags()
+            op.opers[OPER_DST].setOperValue(op, self, None)
+            return
+
+        src2 <<= 16
+
+        result = src1 & src2
+        self.setOperValue(op, 0, result)
+        if op.iflags & IF_RC: self.setFlags(result, 0)
+
+    def i_andc(self, op):
+        '''
+        and "complement"
+        '''
+        ssize = op.opers[1].tsize
+        dst = self.getOperValue(op, 0)
+        src = self.getOperValue(op, 1) ^ e_bits.u_maxes[ssize]
+        # PDE
+        if dst == None or src == None:
+            self.undefFlags()
+            op.opers[OPER_DST].setOperValue(op, self, None)
+            return
+
+        result = (dst & src)
+
+        self.setOperValue(op, 0, result)
+        if op.iflags & IF_RC: self.setFlags(result, 0)
+
     def i_or(self, op):
         dst = self.getOperValue(op, 0)
         src = self.getOperValue(op, 1)
@@ -1058,7 +1181,9 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
             op.opers[OPER_DST].setOperValue(op, self, None)
             return
 
-        self.setOperValue(op, 0, (dst | src))
+        result = (dst | src)
+        
+        self.setOperValue(op, 0, result)
         if op.iflags & IF_RC: self.setFlags(result, 0)
 
     i_ori = i_or
@@ -1248,11 +1373,29 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         # the u stands for "update"... ie. write-back
         op.opers[1].updateReg(self)
     
+    def i_stbx(self, op, size=1):
+        print "%r: test with rA = 0, whatever that means" % op
+        val = self.getOperValue(op, 0)
+        src = self.getOperValue(op, 1)
+        src += self.getOperValue(op, 2)
+        self.writeMemValue(src, val, size)
+        self.setOperValue(op, 1, src)
+
+    def i_sthx(self, op):
+        return self.i_stbx(op, size=2)
+
+    def i_stwx(self, op):
+        return self.i_stbx(op, size=4)
+
+    def i_stwx(self, op):
+        return self.i_stbx(op, size=8)
+
     def i_sth(self, op):
         op.opers[1].tsize = 2
         src = self.getOperValue(op, 0)
         self.setOperValue(op, 1, src)
-   
+
+
     def i_sthu(self, op):
         op.opers[1].tsize = 2
         src = self.getOperValue(op, 0)
@@ -1260,10 +1403,12 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         # the u stands for "update"... ie. write-back
         op.opers[1].updateReg(self)
     
+
     def i_stw(self, op):
         op.opers[1].tsize = 4
         src = self.getOperValue(op, 0)
         self.setOperValue(op, 1, src)
+
    
     def i_stwu(self, op):
         op.opers[1].tsize = 4
@@ -1272,6 +1417,7 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         # the u stands for "update"... ie. write-back
         op.opers[1].updateReg(self)
     
+
     def i_movfrom(self, op):
         src = self.getOperValue(op, 1)
         self.setOperValue(op, 0, src)
@@ -1288,6 +1434,14 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         src = self.getOperValue(op, 0)
         self.setRegister(REG_LR, src)
 
+    def i_mfmsr(self, op):
+        src = self.getRegister(REG_MSR) & 0xffffffff
+        self.setOperValue(op, 0, src)
+
+    def i_mtmsr(self, op):
+        src = self.getOperValue(op, 0) & 0xffffffff
+        self.setRegister(REG_MSR, src)
+
     def i_mfspr(self, op):
         src = self.getOperValue(op, 1)
         self.setOperValue(op, 0, src)
@@ -1301,11 +1455,41 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
 
     def i_lis(self, op):
         src = self.getOperValue(op, 1)
-        #self.setOperValue(op, 0, (src<<16))
+        self.setOperValue(op, 0, (src<<16))
         # technically this is incorrect, but since we disassemble wrong, we emulate wrong.
-        self.setOperValue(op, 0, (src))
+        #self.setOperValue(op, 0, (src))
 
-    def i_rlwinm(self, op):
+    def i_rlwimi(self, op):
+        n = self.getOperValue(op, 2) & 0x1f
+        b = self.getOperValue(op, 3) + 32
+        e = self.getOperValue(op, 4) + 32
+        ra = self.getOperValue(op, 0)
+
+        r = ROTL32(self.getOperValue(op, 1), n)
+        k = MASK(b, e)
+
+        result = (r & k) | (ra & ~k)
+
+        self.setOperValue(op, 0, result)
+        if op.iflags & IF_RC: self.setFlags(result, 0)
+
+        
+    def i_rlwnm(self, op):
+        n = self.getOperValue(op, 2) & 0x1f
+        b = self.getOperValue(op, 3) + 32
+        e = self.getOperValue(op, 4) + 32
+        ra = self.getOperValue(op, 0)
+
+        r = ROTL32(self.getOperValue(op, 1), n)
+        k = MASK(b, e)
+
+        result = r & k
+        self.setOperValue(op, 0, result)
+        if op.iflags & IF_RC: self.setFlags(result, 0)
+
+    i_rlwinm = i_rlwnm
+
+    def i_rlwinm_old(self, op):
         rs = self.getOperValue(op, 1)
         sh = self.getOperValue(op, 2)
         mb = self.getOperValue(op, 3)
@@ -1313,11 +1497,82 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
 
         r = (rs << sh) | (rs >> (32-sh))
         numbits = me - mb
-        k = e_bits.b_masks[numbits] << mb
+        k = e_bits.bu_masks[numbits] << mb
 
         result = r & k
         self.setOperValue(op, 0, result)
         if op.iflags & IF_RC: self.setFlags(result, 0)
+
+    def i_srawi(self, op, size=4):
+        rs = self.getOperValue(op, 1)
+        n = self.getOperValue(op, 2) & 0x1f
+        k = MASK(n+32, 63)
+        r = ROTL32(rs, 64-n)
+        s = (0, e_bits.u_maxes[4])[bool(rs & 0x80000000)]
+
+        result = (r & k) | (s & ~k)
+
+        self.setOperValue(op, 0, result)
+
+        carry = bool(s and ((r & ~k)))
+        self.setRegister(REG_CA, carry)
+        
+        if op.iflags & IF_RC: self.setFlags(result, 0)
+
+    def i_sraw(self, op, size=4):
+        rb = self.getOperValue(op, 2)
+        rs = self.getOperValue(op, 1)
+
+        n = rb & 0x1f
+        r = ROTL32(rs, 64-n)
+        if bool(rb & 0x20):
+            k = 0
+        else:
+            k = MASK(n+32, 63)
+        s = (0, e_bits.u_maxes[4])[bool(rs & 0x80000000)]
+
+        result = (r & k) | (s & ~k)
+
+        carry = bool(s and ((r & ~k)))
+        self.setRegister(REG_CA, carry)
+        
+        if op.iflags & IF_RC: self.setFlags(result, 0)
+        self.setOperValue(op, 0, result)
+
+
+    def i_srw(self, op):
+        rb = self.getOperValue(op, 2)
+        rs = self.getOperValue(op, 1)
+
+        n = rb & 0x1f
+        r = ROTL32(rs, 64-n)
+        if bool(rb & 0x20):
+            k = MASK(n+32, 63)
+        else:
+            k = 0
+
+        result = r & k
+
+        if op.iflags & IF_RC: self.setFlags(result, 0)
+        self.setOperValue(op, 0, result)
+        print "srw: rb: %x  rs: %x  result: %x" % (rb, rs, result)
+
+    def i_slw(self, op):
+        rb = self.getOperValue(op, 2)
+        rs = self.getOperValue(op, 1)
+
+        n = rb & 0x1f
+        r = ROTL32(rs, n)
+        if bool(rb & 0x20):
+            k = MASK(32, 63-n)
+        else:
+            k = 0
+
+        result = r & k
+
+        if op.iflags & IF_RC: self.setFlags(result, 0)
+        self.setOperValue(op, 0, result)
+        print "slw: rb: %x  rs: %x  result: %x" % (rb, rs, result)
 
     def i_lha(self, op):
         src = e_bits.signed(self.getOperValue(op, 1), 2)
@@ -1346,6 +1601,39 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
             #TRAP
             self.trap(op)
 
+    def i_mulld(self, op, size=8):
+        ra = self.getOperValue(op, 1) & e_bits.u_maxes[size]
+        rb = self.getOperValue(op, 2) & e_bits.u_maxes[size]
+        prod = ra * rb
+
+        so = self.getRegister(REG_SO)
+        if oe:
+            ov = (prod & 0xffffffff80000000) not in (0, 0xffffffff80000000)
+            so |= ov
+            self.setRegister(REG_SO, so)
+            self.setRegister(REG_OV, ov)
+
+        if op.iflags & IF_RC: self.setFlags(result, so)
+        self.setOperValue(op, 0, prod & e_bits.u_maxes[size])
+
+
+    def i_mullw(self, op, size=4, oe=False):
+        ra = self.getOperValue(op, 1) & e_bits.u_maxes[size]
+        rb = self.getOperValue(op, 2) & e_bits.u_maxes[size]
+        prod = ra * rb
+
+        so = self.getRegister(REG_SO)
+        if oe:
+            ov = (prod & 0xffffffff80000000) not in (0, 0xffffffff80000000)
+            so |= ov
+            self.setRegister(REG_SO, so)
+            self.setRegister(REG_OV, ov)
+
+        if op.iflags & IF_RC: self.setFlags(result, so)
+        self.setOperValue(op, 0, prod)
+
+    def i_mullwo(self, op):
+        return self.i_mullw(oe=True)
 
     def i_mulli(self, op):
         dsize = op.opers[0].tsize
@@ -1356,6 +1644,69 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         result = (src1 * src2) & e_bits.u_maxes[dsize]
 
         self.setOperValue(op, 0, result)
+
+    def i_divw(self, op, oe=False):
+        dividend = e_bits.signed(self.getOperValue(op, 1), 4)
+        divisor = e_bits.signed(self.getOperValue(op, 2), 4)
+        
+        if (dividend == -0x80000000 and divisor == -1):
+            quotient = 0x7fffffff
+
+        elif divisor == 0:
+            if divisor >= 0:
+                quotient = 0x7fffffff
+            elif divisor < 0:
+                quotient = 0x80000000
+
+            ov = 1
+
+        else:
+            quotient = dividend / divisor
+            ov = 0
+
+        so = self.getRegister(REG_SO)
+        if oe:
+            so |= ov
+            self.setRegister(REG_OV, ov)
+            self.setRegister(REG_SO, so)
+
+        if op.iflags & IF_RC: 
+            if self.psize == 8:
+                self.setRegister(REG_CR0, so)
+            else:
+                self.setFlags(result, so)
+
+        self.setOperValue(op, 0, quotient)
+
+    def i_divwu(self, op, oe=False):
+        dividend = self.getOperValue(op, 1)
+        divisor = self.getOperValue(op, 2)
+        
+        if divisor == 0:
+            quotient = 0xffffffff
+            ov = 1
+
+        else:
+            quotient = dividend / divisor
+
+            ov = 0
+
+        so = self.getRegister(REG_SO)
+        if oe:
+            so |= ov
+            self.setRegister(REG_OV, ov)
+            self.setRegister(REG_SO, so)
+
+        if op.iflags & IF_RC: 
+            if self.psize == 8:
+                self.setRegister(REG_CR0, so)
+            else:
+                self.setFlags(result, so)
+
+        self.setOperValue(op, 0, quotient)
+
+    def i_divwuo(self, op):
+        return self.i_divwu(op, oe=True)
 
     def i_mfcr(self, op):
         cr = self.getRegister(REG_CR)
@@ -1484,10 +1835,10 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
         self.setOperValue(op, 0, ures & e_bits.u_maxes[dsize])
 
     def i_subfc(self, op, oeflags=False):
-        self._base_sub(op, oeflags=False, setCarry=True)
+        self._base_sub(op, oeflags=False, setcarry=True)
 
     def i_subfco(self, op):
-        self._base_sub(op, oeflags=True, setCarry=True)
+        self._base_sub(op, oeflags=True, setcarry=True)
 
     def i_subfe(self, op):
         addone = self.getRegister(REG_CA)
@@ -1512,7 +1863,7 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
     def i_subfic(self, op):
         dsize = op.opers[0].tsize
         asize = op.opers[1].tsize
-        immsize = op.opers[2].tsize
+        immsize = 16
         ra = self.getOperValue(op, 1)
         simm = e_bits.signed(self.getOperValue(op, 2), immsize)
 
@@ -1575,6 +1926,32 @@ class PpcEmulator(PpcModule, PpcRegisterContext, envi.Emulator):
     i_e_ori = i_ori
     i_e_or2i = i_ori
     i_e_or2is = i_oris
+
+    def i_neg(self, op, oe=False):
+        ra = self.getOperValue(op, 1)
+        result = ~ra + 1
+
+        if oe:
+            if self.psize == 4 and ra & 0xffffffff == 0x80000000:
+                ov = 1
+                so = ov
+                self.setRegister(REG_OV, ov)
+                self.setRegister(REG_SO, so)
+
+            elif self.psize == 8 and ra == 0x8000000000000000:
+                ov = 1
+                so = ov
+                self.setRegister(REG_OV, ov)
+                self.setRegister(REG_SO, so)
+            else:
+                ov = 0
+                so = self.getRegister(REG_SO)
+
+        if op.iflags & IF_RC: self.setFlags(result, so)
+        self.setOperValue(op, 0, result)
+
+    def i_nego(self, op):
+        return self.i_neg(op, oe=True)
 
     '''
     i_se_bclri                         rX,UI5
@@ -1663,3 +2040,133 @@ m.addMemoryMap(0x0000,0777,"memmap1", "\xff"*1024)
 
 """
 
+class Ppc64Emulator(Ppc64Module, PpcAbstractEmulator):
+    def __init__(self, archmod=None, psize=8):
+        Ppc64AbstractEmulator.__init__(self, archmod=Ppc64Module(), psize=8)
+        PpcModule.__init__(self)
+
+class PpcVleEmulator(PpcVleModule, PpcAbstractEmulator):
+    def __init__(self, archmod=None, psize=8):
+        PpcVleAbstractEmulator.__init__(self, archmod=VleModule(), psize=4)
+        PpcModule.__init__(self)
+
+class PpcSpeEmulator(PpcSpeModule, PpcAbstractEmulator):
+    def __init__(self, archmod=None, psize=4):
+        PpcAbstractEmulator.__init__(self, archmod=PpcSpeModule(), psize=4)
+        PpcSpeModule.__init__(self)
+
+
+
+
+'''
+In [2]: mnems = {}
+
+In [3]: for lva, lsz, ltype, ltinfo in vw.getLocations(vivisect.LOC_OP):
+   ...:     op = vw.parseOpcode(lva)
+   ...:     mnems[op.mnem] = mnems.get(op.mnem, 0) + 1
+   ...:     
+
+In [5]: dist = [(y, x) for x,y in mnems.items()]
+
+In [7]: dist.sort()
+
+In [8]: dist
+Out[8]: 
+[(1, 'add.'),
+ (1, 'addic'),
+ (1, 'addme'),
+ (1, 'and.'),
+ (1, 'andis.'),
+ (1, 'blrl'),
+ (1, 'divw'),
+ (1, 'isync'),
+ (1, 'lhzu'),
+ (1, 'sync'),
+ (2, 'addic.'),
+ (2, 'lha'),
+ (2, 'mtmsr'),
+ (2, 'rlwnm'),
+ (2, 'stwux'),
+ (3, 'bctr'),
+ (3, 'extsh.'),
+ (3, 'not'),
+ (3, 'sraw'),
+ (3, 'subfc'),
+ (3, 'subfe'),
+ (4, 'extsh'),
+ (4, 'iseleq'),
+ (4, 'sthu'),
+ (4, 'subf.'),
+ (5, 'bflr'),
+ (5, 'lbzu'),
+ (5, 'mulhwu'),
+
+    (5, 'sc'),
+ (5, 'srawi.'),
+ (6, 'andc'),
+ (7, 'addc'),
+ (7, 'adde'),
+ (7, 'stbx'),
+ (8, 'btlr'),
+ (8, 'neg'),
+ (9, 'andi.'),
+ (9, 'mfmsr'),
+ (9, 'subfic'),
+ (10, 'nop'),
+ (11, 'lwzu'),
+
+ (11, 'srw'),
+ (13, 'lbzx'),
+ (13, 'slw'),
+ (15, 'mullw'),
+
+ (16, 'bctrl'),
+
+ (17, 'divwu'),
+ (17, 'or.'),
+ (18, 'stbu'),
+ (21, 'oris'),
+ (21, 'rlwimi'),
+
+ (26, 'srawi'),
+ (32, 'addis'),
+ (48, 'sthx'),
+ (50, 'lmw'),
+
+ (50, 'stwx'),
+ (50, 'subf'),
+ (51, 'stmw'),
+
+ (55, 'and'),
+ (55, 'cmpli'),
+ (62, 'lhzx'),
+ (100, 'lwzx'),
+ (125, 'mulli'),
+ (136, 'or'),
+ (141, 'stwu'),
+ (154, 'rlwinm.'),
+ (157, 'mfspr'),
+ (162, 'mtspr'),
+ (172, 'blr'),
+ (190, 'cmp'),
+ (192, 'lbz'),
+ (204, 'cmpl'),
+ (231, 'stb'),
+ (276, 'add'),
+ (341, 'mr'),
+ (380, 'b'),
+ (387, 'bl'),
+ (448, 'ori'),
+ (627, 'bf'),
+ (639, 'cmpi'),
+ (641, 'bt'),
+ (649, 'lhz'),
+ (656, 'sth'),
+ (889, 'lis'),
+ (960, 'rlwinm'),
+ (1033, 'addi'),
+ (1188, 'li'),
+ (1204, 'lwz'),
+ (1389, 'stw')]
+
+'''
