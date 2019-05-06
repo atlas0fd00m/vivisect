@@ -118,7 +118,7 @@ def case_E_SCI8(types, data, va):
         val2 = (ui8 << 16) | (f ? 0xff00ffff : 0);
     else:
         val2 = (ui8 << 24) | (f ? 0x00ffffff : 0);
-        '''
+    '''
 
     op2 = operands[types[2]]
 
@@ -542,12 +542,16 @@ def find_se(buf, offset, endian=True, va=0):
                 value >>= shr
                 value <<= shl
                 value += add
+                #print(data, value)
 
-                handler = operands[ftype]
                 if ftype == TYPE_JMP and value & 0x100:
                     value = e_bits.signed(value | 0xfffffe00, 4)
-                elif ftype == TYPE_REG and value & 8:
-                    value = (value & 0x7) + 24
+                elif ftype == TYPE_REG_SE:
+                    ftype = TYPE_REG
+                    if value & 8:
+                        value = (value & 0x7) + 24
+
+                handler = operands[ftype]
 
                 opieces[idx] = (ftype, value)
                 k += 1

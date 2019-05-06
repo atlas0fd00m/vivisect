@@ -9,6 +9,10 @@ TYPE_IMM =  2
 TYPE_MEM =  3
 TYPE_JMP =  4
 TYPE_CR =   5
+# VLE specific register formats
+TYPE_REG_SE =  6 # Rx:  0-7 = r0-r7, 8-15 = r24-r31
+# The "alt" register format is taken care of by the "add" field in the parser
+# ARx: 0-15 = r8-r23
 
 E_NONE =  0
 E_X =     1
