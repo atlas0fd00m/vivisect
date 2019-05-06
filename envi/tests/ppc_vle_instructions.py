@@ -1,4 +1,4 @@
-ppc_vle_instructions = [
+instructions = [
 	('0000', 'se_illegal'),
 	('0001', 'se_isync'),
 	('0002', 'se_sc'),

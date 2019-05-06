@@ -563,7 +563,7 @@ if __name__ == '__main__':
             print(line)
     else:
         with open(sys.argv[-1], 'w') as f:
-            f.write('ppc_vle_instructions = [\n')
+            f.write('instructions = [\n')
             for line in unique_instructions:
                 f.write('\t' + line + ',\n')
             f.write(']\n')
