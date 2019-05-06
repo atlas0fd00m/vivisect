@@ -51,7 +51,7 @@ class lst_parser(object):
             ('LABEL_MATH',   r'\(?[^-(), ]+ ?[-+] ?[^-+(), ]+\)?(?:@[a-z]+)?'),
             ('LABEL',        r'[^-+(), 0-9][^-+(), ]*'),
             ('DEC_CONST',    r'(?:-)?\b[0-9]+\b'),
-            ('HEX_CONST',    r'\b0x[0-9A-Fa-f]+\b'),
+            ('HEX_CONST',    r'(?:-)?\b0x[0-9A-Fa-f]+\b'),
         ]
         self.token_regex = re.compile('|'.join('(?P<%s>%s)' % pair for pair in token_spec))
 
@@ -282,9 +282,9 @@ class ppc_instr(object):
         arg_list = ''
         if self.args:
             if self.args[-1].type == 'INDIRECT_REF':
-                arg_list = ' ' + ','.join([str(a.value) for a in self.args[:-1]]) + self.args[-1].value
+                arg_list = ' ' + ppc_instr._str_arg_list(self.args[:-1]) + self.args[-1].value
             else:
-                arg_list = ' ' + ','.join([str(a.value) for a in self.args])
+                arg_list = ' ' + ppc_instr._str_arg_list(self.args)
 
         return str((self.data.match, self.op.value + arg_list))
 
@@ -292,12 +292,26 @@ class ppc_instr(object):
         arg_list = ''
         if self.args:
             if self.args[-1].type == 'INDIRECT_REF':
-                arg_list = ' ' + ','.join([str(a.value) for a in self.args[:-1]]) + self.args[-1].value
+                arg_list = ' ' + ppc_instr._str_arg_list(self.args[:-1]) + self.args[-1].value
             else:
-                arg_list = ' ' + ','.join([str(a.value) for a in self.args])
+                arg_list = ' ' + ppc_instr._str_arg_list(self.args)
 
         fmt = '{0.data.match: <8} {0.op.value}{1}'
         return fmt.format(self, arg_list)
+
+    @classmethod
+    def _str_arg(cls, arg):
+        if isinstance(arg, str):
+            return arg
+        else:
+            if arg < 0:
+                return hex(0xFFFFFFFF + arg + 1)
+            else:
+                return hex(arg)
+
+    @classmethod
+    def _str_arg_list(cls, arg_list):
+        return ','.join([cls._str_arg(a.value) for a in arg_list])
 
     @classmethod
     def _dec_token(cls, val):
@@ -455,8 +469,8 @@ class ppc_instr(object):
         scl_mask = 0x00000300
         data_mask = 0x000000FF
 
-        f = (data & f_mask)
-        scl = (data & scl_mask)
+        f = (data & f_mask) >> 10
+        scl = (data & scl_mask) >> 8
         ui8 = (data & data_mask)
 
         fill = 0x00
