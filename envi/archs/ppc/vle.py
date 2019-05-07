@@ -21,7 +21,10 @@ import envi.bits as e_bits
 operands = (
         None,
         PpcRegOper,
+        PpcRegOper,
+        PpcRegOper,
         PpcImmOper,
+        PpcSImm32Oper,
         PpcMemOper,
         PpcJmpOper,
         PpcCrOper,
@@ -59,8 +62,12 @@ def case_E_D(types, data, va):
     if (val2 & 0x8000) :
         val2 = 0xFFFF0000 | val2;
     
+    # holy crap, this table is a mess.  too C-ish, not Pythonic.
     if types[1] == TYPE_MEM:
-        opers = ( op0(val0, va), op1(val1, val2, va) )  # holy crap, this table is a mess.  too C-ish, not Pythonic.
+        if types[2] == TYPE_REG_Z and val1 == 0:
+            opers = ( op0(val0, va), PpcImmOper(val2, va) )
+        else:
+            opers = ( op0(val0, va), op1(val1, val2, va) )
     else:
         op2 = operands[types[2]]
         opers = ( op0(val0, va), op1(val1, va), op2(val2, va) )  # holy crap, this table is a mess.  too C-ish, not Pythonic.
@@ -81,15 +88,24 @@ def case_E_D8(types, data, va):
     opers = ( op0(val0, va), op1(val1, val2, va) )
     return opers
 
+# Handles the new multiple load/store VLE instructions
+def case_E_D8VLS(types, data, va):
+    val0 = (data & 0x1F0000) >> 16;
+    op0 = operands[types[0]]
+
+    val1 = data & 0xFF;
+    if (val1 & 0x80):
+        val1 = 0xFFFFFF00 | val1;
+    
+    opers = ( op0(val0, val1, va), )
+    return opers
+
 def case_E_I16A(types, data, va):
     val1 = (data & 0x3E00000) >> 10;
     op1 = operands[types[0]]
     val0 = (data & 0x1F0000) >> 16;
     op0 = operands[types[1]]
     val1 |= (data & 0x7FF);
-    if (val1 & 0x8000):
-        val1 = 0xFFFF0000 | val1;
-    
 
     opers = ( op0(val0, va), op1(val1, va) )
     #print "E_I16/A", opers
@@ -125,6 +141,7 @@ def case_E_SCI8(types, data, va):
     opers = ( op0(val0, va), op1(val1, va), op2(val2, va) )
     return opers
 
+# Handles SCI8 form instructions with rA and rS inverted
 def case_E_SCI8I(types, data, va):
     val1 = (data & 0x3E00000) >> 21;
     op1 = operands[types[0]]
@@ -133,27 +150,59 @@ def case_E_SCI8I(types, data, va):
     ui8 = data & 0xFF;
     scl = (data & 0x300) >> 8;
     f = bool(data & 0x400)
-
+    
     val2 = (ui8 << (8*scl)) | (f * SCI_mask[scl])
     '''
-    switch (scl) {
-            case 0:
-                    val2 = ui8 | (f ? 0xffffff00 : 0);
-                    break;
-            case 1:
-                    val2 = (ui8 << 8) | (f ? 0xffff00ff : 0);
-                    break;
-            case 2:
-                    val2 = (ui8 << 16) | (f ? 0xff00ffff : 0);
-                    break;
-            default:
-                    val2 = (ui8 << 24) | (f ? 0x00ffffff : 0);
-                    break;
-    }
+    if scl == 0:
+        val2 = ui8 | (f ? 0xffffff00 : 0);
+    elif scl == 1:
+        val2 = (ui8 << 8) | (f ? 0xffff00ff : 0);
+    elif scl == 2:
+        val2 = (ui8 << 16) | (f ? 0xff00ffff : 0);
+    else:
+        val2 = (ui8 << 24) | (f ? 0x00ffffff : 0);
     '''
+
     op2 = operands[types[2]]
 
     opers = ( op0(val0, va), op1(val1, va), op2(val2, va) )
+    return opers
+
+# Handles SCI8 form compare instructions with a smaller register field
+def case_E_SCI8CR(types, data, va):
+    val0 = (data & 0x0600000) >> 21;
+    op0 = operands[types[0]]
+    val1 = (data & 0x1F0000) >> 16;
+    op1 = operands[types[1]]
+    ui8 = data & 0xFF;
+    scl = (data & 0x300) >> 8;
+    f = bool(data & 0x400)
+    
+    val2 = (ui8 << (8*scl)) | (f * SCI_mask[scl])
+    '''
+    if scl == 0:
+        val2 = ui8 | (f ? 0xffffff00 : 0);
+    elif scl == 1:
+        val2 = (ui8 << 8) | (f ? 0xffff00ff : 0);
+    elif scl == 2:
+        val2 = (ui8 << 16) | (f ? 0xff00ffff : 0);
+    else:
+        val2 = (ui8 << 24) | (f ? 0x00ffffff : 0);
+    '''
+
+    op2 = operands[types[2]]
+
+    opers = ( op0(val0, va), op1(val1, va), op2(val2, va) )
+    return opers
+
+# Handles SCI8 form instructions that don't use the immediate field
+def case_E_SCI8_2(types, data, va):
+    val0 = (data & 0x03F00000) >> 21;
+    op0 = operands[types[0]]
+    val1 = (data & 0x01F0000) >> 16;
+    op1 = operands[types[1]]
+
+    opers = ( op0(val0, va), op1(val1, va) )
     return opers
 
 def case_E_I16L(types, data, va):
@@ -442,10 +491,13 @@ e_handlers = {
         E_XRA: case_E_XRA,
         E_D: case_E_D,
         E_D8: case_E_D8,
+        E_D8VLS: case_E_D8VLS,
         E_I16A: case_E_I16A,
         E_IA16: case_E_IA16,
         E_SCI8: case_E_SCI8,
         E_SCI8I: case_E_SCI8I,
+        E_SCI8CR: case_E_SCI8CR,
+        E_SCI8_2: case_E_SCI8_2,
         E_I16L: case_E_I16L,
         E_I16LS: case_E_I16LS,
         E_BD24: case_E_BD24,
@@ -547,7 +599,6 @@ def find_se(buf, offset, endian=True, va=0):
                 if ftype == TYPE_JMP and value & 0x100:
                     value = e_bits.signed(value | 0xfffffe00, 4)
                 elif ftype == TYPE_REG_SE:
-                    ftype = TYPE_REG
                     if value & 8:
                         value = (value & 0x7) + 24
 

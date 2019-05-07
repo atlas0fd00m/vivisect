@@ -273,7 +273,7 @@ class PpcImmOper(envi.ImmedOper):
 
     def repr(self, op):
         val = self.getOperValue(op)
-        return '0x%x' % (val)
+        return '%#x' % (val)
 
 class PpcSImmOper(PpcImmOper):
     ''' Signed Immediate operand. '''
@@ -297,6 +297,11 @@ class PpcSImm16Oper(PpcSImmOper):
     ''' Unsigned Immediate operand. '''
     def __init__(self, val, va=0, tsize=4):
         PpcSImmOper.__init__(self, val, va, 16, tsize)
+
+class PpcSImm32Oper(PpcSImmOper):
+    ''' Signed Immediate operand. '''
+    def __init__(self, val, va=0, tsize=4):
+        PpcSImmOper.__init__(self, val, va, 32, tsize)
 
 class PpcSImm3Oper(PpcSImmOper):
     ''' Signed Immediate operand. '''

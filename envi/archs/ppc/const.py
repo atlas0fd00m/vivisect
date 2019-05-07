@@ -5,40 +5,45 @@ ENDIAN_MSB = 1
 
 TYPE_NONE = 0
 TYPE_REG =  1
-TYPE_IMM =  2
-TYPE_MEM =  3
-TYPE_JMP =  4
-TYPE_CR =   5
-# VLE specific register formats
-TYPE_REG_SE =  6 # Rx:  0-7 = r0-r7, 8-15 = r24-r31
-# The "alt" register format is taken care of by the "add" field in the parser
-# ARx: 0-15 = r8-r23
+TYPE_REG_Z = 2 # If reg == r0, use 0 instead
+TYPE_REG_SE = 3 # VLE specific register formats
+TYPE_IMM =  4
+TYPE_SIMM = 5
+TYPE_MEM =  6
+TYPE_JMP =  7
+TYPE_CR =   8
 
 E_NONE =  0
 E_X =     1
 E_XL =    2
 E_D =     3
 E_D8 =    4
-E_I16A =  5
-E_SCI8 =  6
-E_SCI8I = 7
-E_I16L =  8
-E_I16LS = 9
-E_BD24 =  10
-E_BD15 =  11
-E_IA16 =  12
-E_LI20 =  13
-E_M =     14
-E_XCR =   15
-E_XLSP =  16
-E_XRA =   17
+E_D8VLS = 5
+E_I16A =  6
+E_SCI8 =  7
+E_SCI8I = 8
+E_SCI8CR = 9
+E_SCI8_2 = 10
+E_I16L =  11
+E_I16LS = 12
+E_BD24 =  13
+E_BD15 =  14
+E_IA16 =  15
+E_LI20 =  16
+E_M =     17
+E_XCR =   18
+E_XLSP =  19
+E_XRA =   20
 
 E_MASK_X =    0x03FFF800
 E_MASK_XL =   0x03FFF801
 E_MASK_D =    0x03FFFFFF
 E_MASK_D8 =   0x03FF00FF
+E_MASK_D8VLS = 0x001F00FF
 E_MASK_I16A = 0x03FF07FF
 E_MASK_SCI8 = 0x03FF07FF
+E_MASK_SCI8CR = 0x007F07FF
+E_MASK_SCI8_2 = 0x03FF0700
 E_MASK_I16L = 0x03FF07FF
 E_MASK_BD24 = 0x03FFFFFE
 E_MASK_BD15 = 0x000CFFFE
