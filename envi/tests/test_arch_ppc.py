@@ -18,7 +18,7 @@ class PpcInstructionSet(unittest.TestCase):
             op_str = repr(op).strip()
             if op_str == result_instr:
                 test_pass += 1
-            self.assertEqual(op_str, result_instr, '{}: {} != {}'.format(test_bytes, result_instr, op_str))
+            self.assertEqual(result_instr, op_str, '{}: {} != {}'.format(test_bytes, result_instr, op_str))
 
         self.assertEqual(test_pass, len(ppc_vle_instructions.instructions))
 
@@ -36,6 +36,6 @@ class PpcInstructionSet(unittest.TestCase):
             op_str = repr(op).strip()
             if op_str == result_instr:
                 test_pass += 1
-            self.assertEqual(op_str, result_instr, '{}: {} != {}'.format(test_bytes, result_instr, op_str))
+            self.assertEqual(result_instr, op_str, '{}: {} != {}'.format(test_bytes, result_instr, op_str))
 
         self.assertEqual(test_pass, len(ppc64_gcc_instructions.instructions))
