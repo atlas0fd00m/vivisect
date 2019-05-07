@@ -77,42 +77,44 @@ class lst_parser(object):
 class ppc_instr(object):
     Instructions = {
         # Unconditional Branches
-        'se_b':         'signed_bd8',               # BD8:  signed 8 bit value << 1
-        'se_bl':        'signed_bd8',               # BD8:  signed 8 bit value << 1
-        'e_b':          'signed_bd24',              # BD24: signed 24 bit value << 1
-        'e_bl':         'signed_bd24',              # BD24: signed 24 bit value << 1
-        'b':            'signed_i',                 # I:    signed 24 bit value << 2
-        'bl':           'signed_i',                 # I:    signed 24 bit value << 2
+        'se_b':         'signed_bd8',              # BD8:  signed 8 bit value << 1
+        'se_bl':        'signed_bd8',              # BD8:  signed 8 bit value << 1
+        'e_b':          'signed_bd24',             # BD24: signed 24 bit value << 1
+        'e_bl':         'signed_bd24',             # BD24: signed 24 bit value << 1
+        'b':            'signed_i',                # I:    signed 24 bit value << 2
+        'bl':           'signed_i',                # I:    signed 24 bit value << 2
 
         # Conditional Branches
-        'se_bge':       'signed_bd8',               # BD8:  signed 8 bit value << 1
-        'se_bgt':       'signed_bd8',               # BD8:  signed 8 bit value << 1
-        'se_ble':       'signed_bd8',               # BD8:  signed 8 bit value << 1
-        'se_blt':       'signed_bd8',               # BD8:  signed 8 bit value << 1
-        'se_bne':       'signed_bd8',               # BD8:  signed 8 bit value << 1
-        'se_beq':       'signed_bd8',               # BD8:  signed 8 bit value << 1
-        'e_bge':        'signed_bd15',              # BD15: signed 15 bit value << 1
-        'e_bgt':        'signed_bd15',              # BD15: signed 15 bit value << 1
-        'e_ble':        'signed_bd15',              # BD15: signed 15 bit value << 1
-        'e_blt':        'signed_bd15',              # BD15: signed 15 bit value << 1
-        'e_bne':        'signed_bd15',              # BD15: signed 15 bit value << 1
-        'e_beq':        'signed_bd15',              # BD15: signed 15 bit value << 1
-        'e_bdnz':       'signed_bd15',              # BD15: signed 15 bit value << 1
-        'bge':          'signed_b',                 # I:    signed 14 bit value << 2
-        'bgt':          'signed_b',                 # I:    signed 14 bit value << 2
-        'ble':          'signed_b',                 # I:    signed 14 bit value << 2
-        'blt':          'signed_b',                 # I:    signed 14 bit value << 2
-        'bne':          'signed_b',                 # I:    signed 14 bit value << 2
-        'beq':          'signed_b',                 # I:    signed 14 bit value << 2
-        'bdnz':         'signed_b',                 # I:    signed 14 bit value << 2
-        'bdnzf':        'signed_b',                 # I:    signed 14 bit value << 2
-        'bdnzt':        'signed_b',                 # I:    signed 14 bit value << 2
-        'bns':          'signed_b',                 # I:    signed 14 bit value << 2
-        'bdz':          'signed_b',                 # I:    signed 14 bit value << 2
-        'bcl':          'signed_b',                 # I:    signed 14 bit value << 2
+        'se_bge':       'signed_bd8',              # BD8:  signed 8 bit value << 1
+        'se_bgt':       'signed_bd8',              # BD8:  signed 8 bit value << 1
+        'se_ble':       'signed_bd8',              # BD8:  signed 8 bit value << 1
+        'se_blt':       'signed_bd8',              # BD8:  signed 8 bit value << 1
+        'se_bne':       'signed_bd8',              # BD8:  signed 8 bit value << 1
+        'se_beq':       'signed_bd8',              # BD8:  signed 8 bit value << 1
+        'e_bge':        'signed_bd15',             # BD15: signed 15 bit value << 1
+        'e_bgt':        'signed_bd15',             # BD15: signed 15 bit value << 1
+        'e_ble':        'signed_bd15',             # BD15: signed 15 bit value << 1
+        'e_blt':        'signed_bd15',             # BD15: signed 15 bit value << 1
+        'e_bne':        'signed_bd15',             # BD15: signed 15 bit value << 1
+        'e_beq':        'signed_bd15',             # BD15: signed 15 bit value << 1
+        'e_bdnz':       'signed_bd15',             # BD15: signed 15 bit value << 1
+        'bge':          'signed_b',                # I:    signed 14 bit value << 2
+        'bgt':          'signed_b',                # I:    signed 14 bit value << 2
+        'ble':          'signed_b',                # I:    signed 14 bit value << 2
+        'blt':          'signed_b',                # I:    signed 14 bit value << 2
+        'bne':          'signed_b',                # I:    signed 14 bit value << 2
+        'beq':          'signed_b',                # I:    signed 14 bit value << 2
+        'bdnz':         'signed_b',                # I:    signed 14 bit value << 2
+        'bdnzf':        'signed_b',                # I:    signed 14 bit value << 2
+        'bdnzt':        'signed_b',                # I:    signed 14 bit value << 2
+        'bns':          'signed_b',                # I:    signed 14 bit value << 2
+        'bdz':          'signed_b',                # I:    signed 14 bit value << 2
+        'bcl':          'signed_b',                # I:    signed 14 bit value << 2
         
         # Integer Select
-        'isel':         'signed_a',               # DS:   unsigned 14 bit value << 2
+        'iseleq':       'special_r0_handling',     # A:    special handling of param rA r0 case
+        'isellt':       'special_r0_handling',     # A:    special handling of param rA r0 case
+        'iselgt':       'special_r0_handling',     # A:    special handling of param rA r0 case
 
         # Store Doubleword
         'std':          'signed_ds',               # DS:   unsigned 14 bit value << 2
@@ -158,14 +160,15 @@ class ppc_instr(object):
         'e_lwz':        'signed_d',                # D:    signed 16 bit value
         'e_lmw':        'signed_d8',               # D8:   signed 8 bit value
         'e_lwzu':       'signed_d8',               # D8:   signed 8 bit value
-        'e_lmvgprw':    'signed_d8',               # D8:   signed 8 bit value
-        'e_lmvsprw':    'signed_d8',               # D8:   signed 8 bit value
-        'e_lmvsrrw':    'signed_d8',               # D8:   signed 8 bit value
-        'e_lmvcrrw':    'signed_d8',               # D8:   signed 8 bit value
-        'e_lmvdrrw':    'signed_d8',               # D8:   signed 8 bit value
+        'e_ldmvgprw':   'signed_d8',               # D8:   signed 8 bit value
+        'e_ldmvsprw':   'signed_d8',               # D8:   signed 8 bit value
+        'e_ldmvsrrw':   'signed_d8',               # D8:   signed 8 bit value
+        'e_ldmvcrrw':   'signed_d8',               # D8:   signed 8 bit value
+        'e_ldmvdrrw':   'signed_d8',               # D8:   signed 8 bit value
         'lwz':          'signed_d',                # D:    signed 16 bit value
         'lwa':          'signed_d',                # D:    signed 16 bit value
         'lwzu':         'signed_d',                # D:    signed 16 bit value
+        'lwzx':         'special_r0_handling',     # X:    special handling of param rA r0 case
 
         # Load Float Double
         'lfd':          'signed_d',                # D:    unsigned 16 bit value
@@ -182,6 +185,7 @@ class ppc_instr(object):
         'lhz':          'signed_d',                # D:    signed 16 bit value
         'lha':          'signed_d',                # D:    signed 16 bit value
         'lhzu':         'signed_d',                # D:    signed 16 bit value
+        'lhax':         'special_r0_handling',     # X:    special handling of param rA r0 case
         
         # Load Byte
         'se_lbz':       'unsigned_sd4_byte_addr',  # SD4:  unsigned 4 bit value
@@ -194,18 +198,18 @@ class ppc_instr(object):
         # Load Immediate'
         'se_li':        'unsigned_im7',            # IM7:  unsigned 7 bit value
         'e_li':         'signed_li20',             # LI20: signed 20 bit value
-        'e_lis':        'unsigned_i16l',           # I16L: unsigned 16 bit value << 16
+        'e_lis':        'unsigned_i16l',           # I16L: unsigned 16 bit value
         'li':           'signed_d',                # D:    signed 16 bit value
         
         # OR Immediate
         'e_or2i':       'unsigned_i16l',           # I16L: unsigned 16 bit value
-        'e_or2is':      'unsigned_i16l',           # I16L: unsigned 16 bit value << 16
+        'e_or2is':      'unsigned_i16l',           # I16L: unsigned 16 bit value
         'e_ori':        'unsigned_sci8',           # SCI8: "unsigned" 32 bit value
         'e_ori.':       'unsigned_sci8',           # SCI8: "unsigned" 32 bit value
 
         # XOR Immediate
-        'e_xori':       'signed_sci8',             # SCI8: "signed" 32 bit value
-        'e_xori.':      'signed_sci8',             # SCI8: "signed" 32 bit value
+        'e_xori':       'unsigned_sci8',           # SCI8: "unsigned" 32 bit value
+        'e_xori.':      'unsigned_sci8',           # SCI8: "unsigned" 32 bit value
         
         # AND Immediate
         'se_andi':      'unsigned_im5',            # IM5:  unsigned 5 bit value
@@ -213,28 +217,71 @@ class ppc_instr(object):
         'e_and2is.':    'unsigned_i16l',           # I16L: unsigned 16 bit value
         'e_andi':       'unsigned_sci8',           # SCI8: "unsigned" 32 bit value
         'e_andi.':      'unsigned_sci8',           # SCI8: "unsigned" 32 bit value
+
+        # Shift Immediate
+        'se_srwi':      'unsigned_im5',            # IM5:  unsigned 5 bit value
+        'se_srawi':     'unsigned_im5',            # IM5:  unsigned 5 bit value
+        'se_slwi':      'unsigned_im5',            # IM5:  unsigned 5 bit value
+        'e_srwi':       'unsigned_x',              # X:    unsigned 5 bit value
+        'e_srwi.':      'unsigned_x',              # X:    unsigned 5 bit value
+        'e_slwi':       'unsigned_x',              # X:    unsigned 5 bit value
+        'e_rlwi':       'unsigned_x',              # X:    unsigned 5 bit value
+        'e_rlwimi':     'unsigned_m',              # M:    3 unsigned 5 bit values
+        'e_rlwinm':     'unsigned_m',              # M:    3 unsigned 5 bit values
+        'e_extrwi':     'unsigned_m',              # M:    3 unsigned 5 bit values
+        'e_extlwi':     'unsigned_m',              # M:    3 unsigned 5 bit values
+        'e_clrlslwi':   'unsigned_m',              # M:    3 unsigned 5 bit values
+        'e_clrlwi':     'unsigned_m',              # M:    3 unsigned 5 bit values
+        'e_insrwi':     'unsigned_m',              # M:    3 unsigned 5 bit values
+        'e_clrrwi':     'unsigned_m',              # M:    3 unsigned 5 bit values
+        'e_rotrwi':     'unsigned_m',              # M:    3 unsigned 5 bit values
+        'e_rotlwi':     'unsigned_m',              # M:    3 unsigned 5 bit values
+        'srawi':        'unsigned_x',              # X:    unsigned 5 bit value
+
+        # Bit Manipulate Immediate
+        'se_bmaski':    'unsigned_im5',            # IM5:  unsigned 5 bit value
+        'se_bclri':     'unsigned_im5',            # IM5:  unsigned 5 bit value
+        'se_bseti':     'unsigned_im5',            # IM5:  unsigned 5 bit value
+        'se_btsti':     'unsigned_im5',            # IM5:  unsigned 5 bit value
+        'se_bgeni':     'unsigned_im5',            # IM5:  unsigned 5 bit value
+
+        # Compare Immediate
+        'se_cmpli':     'unsigned_oim5',           # OIM5: unsigned 5 bit value
+        'se_cmpi':      'unsigned_im5',            # IM5:  unsigned 5 bit value
+        'e_cmpli':      'unsigned_sci8',           # SCI8: "unsigned" 32 bit value
+        'e_cmpi':       'signed_sci8',             # SCI8: "signed" 32 bit value
+        'e_cmpl16i':    'unsigned_i16a',           # IA16 (same as I16A?): unsigned 16 bit value
+        'e_cmp16i':     'signed_i16a',             # IA16 (same as I16A?): signed 16 bit value
         
         # Add Immediate
-        'se_addi':      'unsigned_oim5_plus1',     # OIM5: unsigned 5 bit value + 1
+        'se_addi':      'unsigned_oim5',           # OIM5: unsigned 5 bit value
         'e_add16i':     'signed_d',                # D:    signed 16 bit value
         'e_add2i.':     'signed_i16a',             # I16A: signed 16 bit value
-        'e_add2is':     'unsigned_i16a',           # I16A: unsigned 16 bit value << 16
-        'e_addi':       'signed_sci8',             # SCI8: "signed" 32 bit value
-        'e_addi.':      'signed_sci8',             # SCI8: "signed" 32 bit value
+        'e_add2is':     'unsigned_i16a',           # I16A: unsigned 16 bit value
+        'e_addi':       'unsigned_sci8',           # SCI8: "unsigned" 32 bit value
+        'e_addi.':      'unsigned_sci8',           # SCI8: "unsigned" 32 bit value
         'addi':         'signed_d',                # D:    signed 16 bit value
         'addis':        'signed_d',                # D:    signed 16 bit value
         'addic':        'signed_d',                # D:    signed 16 bit value
         'addic.':       'signed_d',                # D:    signed 16 bit value
 
+        # Multiply Immediate
+        'e_mulli':      'signed_sci8',             # SCI8: "signed" 32 bit value
+        'e_mull2i':     'signed_i16a',             # I16A: signed 16 bit value
+
         # Subtract Immediate
-        'se_subi':      'unsigned_oim5_plus1',     # OIM5: unsigned 5 bit value + 1
-        'se_subi.':     'unsigned_oim5_plus1',     # OIM5: unsigned 5 bit value + 1
-        'e_subfic':     'signed_sci8',             # SCI8: "signed" 32 bit value
-        'e_subfic.':    'signed_sci8',             # SCI8: "signed" 32 bit value
+        'se_subi':      'unsigned_oim5',           # OIM5: unsigned 5 bit value
+        'se_subi.':     'unsigned_oim5',           # OIM5: unsigned 5 bit value
+        'e_subfic':     'unsigned_sci8',           # SCI8: "unsigned" 32 bit value
+        'e_subfic.':    'unsigned_sci8',           # SCI8: "unsigned" 32 bit value
 
         # Move To/From SPR
         'mtspr':        'xfx_spr',                 # XFX: Special Purpose Register
         'mfspr':        'xfx_spr',                 # XFX: Special Purpose Register
+
+        # Other
+        'mbar':         'xfx',                     # XFX: special MO flag
+        'wrteei':       'wrteei',                  # X:   special E flag
     }
 
     def __init__(self, tokens, line_nr):
@@ -255,22 +302,38 @@ class ppc_instr(object):
                 self.args.append(lst_parser.Token('TBD', tok, 'TBD', tok.column))
 
         # Ensure that there is at most 1 TBD arg
-        tbd_args = [a for a in self.args if a.type == 'TBD']
+        tbd_args = [a for a in self.args if a.type in ['TBD', 'DEC_CONST', 'HEX_CONST']]
         # Special case, force all mtspr/mfspr instructions to get the immediate
         # values recalculated
-        if len(tbd_args) == 1 or self.op.value in ['mtspr', 'mfspr']:
+        #if len(tbd_args) == 1 or self.op.value in ['mtspr', 'mfspr']:
+        if len(tbd_args) >= 1:
             self.fix()
-        elif len(tbd_args) > 1:
-            err = 'Too many TBD arguments ({}): {}'.format(self._line_nr, self._tokens)
-            raise Exception(err)
 
     def fix(self):
+        # IDA listings use some incorrect mnemononics
+        rename_mapping = {
+                'eieio':       'mbar',
+                'e_lmvgprw':   'e_ldmvgprw',
+                'e_lmvsprw':   'e_ldmvsprw',
+                'e_lmvsrrw':   'e_ldmvsrrw',
+                'e_lmvcsrrw':  'e_ldmvcsrrw',
+                'e_lmvdsrrw':  'e_ldmvdsrrw',
+        }
+
+        if self.op.value in rename_mapping:
+            # 'eieio' was the old PPC instruction, it should now be called 'mbar'
+            new_op = lst_parser.Token('ASM', self.op.match, rename_mapping[self.op.value], self.op.column)
+            self.op = new_op
+
         fixed_args = []
         for arg in self.args:
-            if arg.type == 'TBD':
+            if arg.type in ['TBD', 'DEC_CONST', 'HEX_CONST']:
                 if self.op.value in ppc_instr.Instructions:
                     new_arg = getattr(self, ppc_instr.Instructions[self.op.value])(self.data.value)
-                    fixed_args.append(new_arg)
+                    if isinstance(new_arg, list):
+                        fixed_args.extend(new_arg)
+                    else:
+                        fixed_args.append(new_arg)
                 else:
                     err = '{} (@ {}) needs fixing ({})'.format(self.op.value, self._line_nr, self._tokens)
                     raise NotImplementedError(err)
@@ -296,22 +359,22 @@ class ppc_instr(object):
             else:
                 arg_list = ' ' + ppc_instr._str_arg_list(self.args)
 
-        fmt = '{0.data.match: <8} {0.op.value}{1}'
+        if self.op.value in ['tdi', 'vaddubm']:
+            fmt = '#{0.data.match: <8} {0.op.value}{1}'
+        else:
+            fmt = '{0.data.match: <8} {0.op.value}{1}'
         return fmt.format(self, arg_list)
 
     @classmethod
     def _str_arg(cls, arg):
-        if isinstance(arg, str):
-            return arg
+        if isinstance(arg.value, str):
+            return arg.value
         else:
-            if arg < 0:
-                return hex(0xFFFFFFFF + arg + 1)
-            else:
-                return hex(arg)
+            return hex(arg.value)
 
     @classmethod
     def _str_arg_list(cls, arg_list):
-        return ','.join([cls._str_arg(a.value) for a in arg_list])
+        return ','.join([cls._str_arg(a) for a in arg_list])
 
     @classmethod
     def _dec_token(cls, val):
@@ -412,24 +475,24 @@ class ppc_instr(object):
 
     @classmethod
     def signed_li20(cls, data):
-        mask_1 = 0x000078000
-        mask_2 = 0x001F00000
-        mask_3 = 0x000007FFF
+        mask_1 = 0x00007800
+        mask_2 = 0x001F0000
+        mask_3 = 0x000007FF
         up_val = (data & mask_1) << 5  # upper >> 11 then << 16
         mid_val = (data & mask_2) >> 5 # mid >> 16 then << 11
         low_val = (data & mask_3)      # no shift
 
         unsigned_val = up_val | mid_val | low_val
 
-        sign = 0x00100000
-        mask = 0x000FFFFF
+        sign = 0x00080000
+        mask = 0x0007FFFF
         signed_val = (unsigned_val & mask) - (unsigned_val & sign)
         return cls._dec_token(signed_val)
 
     @classmethod
     def _get_i16l_imm(cls, data):
-        mask_1 = 0x001F00000
-        mask_2 = 0x000007FFF
+        mask_1 = 0x001F0000
+        mask_2 = 0x000007FF
         up_val = (data & mask_1) >> 5  # upper >> 16 then << 11
         low_val = (data & mask_2)      # no shift
         unsigned_val = up_val | low_val
@@ -457,11 +520,42 @@ class ppc_instr(object):
         return cls._hex_token(val)
 
     @classmethod
-    def unsigned_oim5_plus1(cls, data):
+    def unsigned_oim5(cls, data):
         val = cls._get_im5_imm(data) + 1
 
         # Make since this is used in "se_addi", make this a decimal operand
         return cls._dec_token(val)
+
+    @classmethod
+    def unsigned_x(cls, data):
+        mask = 0x0000F100
+        val = (data & mask) >> 11
+
+        # Make hex tokens for logical operation operands
+        return cls._hex_token(val)
+
+    @classmethod
+    def unsigned_m(cls, data):
+        mask_1 = 0x0000F100
+        mask_2 = 0x000007C0
+        mask_3 = 0x0000003E
+        shift = (data & mask_1) >> 11
+        mask_begin = (data & mask_2) >> 6
+        mask_end = (data & mask_3) >> 1
+
+        # Make hex tokens for logical operation operands
+        return [cls._hex_token(shift), cls._hex_token(mask_begin), cls._hex_token(mask_end)]
+
+    @classmethod
+    def special_r0_handling(cls, data):
+        mask = 0x001F0000
+        val = (data & mask) >> 16
+
+        if val == 0:
+            return cls._dec_token(val)
+        else:
+            reg_str ='r{}'.format(val)
+            return lst_parser.Token('REG', reg_str, reg_str, None)
 
     @classmethod
     def _get_sci8_imm(cls, data):
@@ -510,8 +604,8 @@ class ppc_instr(object):
 
     @classmethod
     def _get_i16a_imm(cls, data):
-        mask_1 = 0x03E000000
-        mask_2 = 0x0000007FF
+        mask_1 = 0x03E00000
+        mask_2 = 0x000007FF
         up_val = (data & mask_1) >> 10  # upper >> 21 then << 11
         low_val = (data & mask_2)       # no shift
         unsigned_val = up_val | low_val
@@ -545,6 +639,22 @@ class ppc_instr(object):
 
         # For unsigned values return a hex operand
         return cls._hex_token(unsigned_val)
+
+    @classmethod
+    def xfx(cls, data):
+        mask = 0x003E0000
+        val = (data & mask) >> 22
+
+        # For unsigned values return a hex operand
+        return cls._hex_token(val)
+
+    @classmethod
+    def wrteei(cls, data):
+        mask = 0x00008000
+        val = (data & mask) >> 15
+
+        # For unsigned values return a hex operand
+        return cls._dec_token(val)
 
 
 def parse(lst_lines):
