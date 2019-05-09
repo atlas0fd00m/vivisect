@@ -382,6 +382,8 @@ class ppc_instr(object):
             'mtsrr0':      'mtspr',
             'mfsrr1':      'mfspr',
             'mtsrr1':      'mtspr',
+            'mftb':        'mfspr',
+            'mftbu':       'mfspr',
         }
         if self.op.value in spr_asm:
             new_op = lst_parser.Token('ASM', self.op.match, spr_asm[self.op.value], self.op.column)
@@ -727,8 +729,8 @@ class ppc_instr(object):
             261: 'SPRG5_USER',
             262: 'SPRG6_USER',
             263: 'SPRG7_USER',
-            268: 'TBL_USER',
-            269: 'TBU_USER',
+            268: 'TB',
+            269: 'TBU',
             272: 'SPRG0',
             273: 'SPRG1',
             274: 'SPRG2',
