@@ -677,11 +677,9 @@ def find_se(buf, offset, endian=True, va=0):
 
                 if ftype == TYPE_JMP and value & 0x100:
                     value = e_bits.signed(value | 0xfffffe00, 4)
-                elif ftype == TYPE_REG_SE:
+                elif ftype in [TYPE_MEM, TYPE_REG_SE]:
                     if value & 8:
                         value = (value & 0x7) + 24
-
-                handler = operands[ftype]
 
                 opieces[idx] = (ftype, value)
                 k += 1
@@ -696,8 +694,8 @@ def find_se(buf, offset, endian=True, va=0):
                 if ftype == TYPE_MEM:
                     k += 1
                     ft2, val2 = opieces[k]
-                    if ft2 != TYPE_MEM:
-                        print "PROBLEM! ft2 is not TYPE_MEM!"
+                    if ft2 != TYPE_IMM:
+                        print "PROBLEM! ft2 is not TYPE_IMM!"
 
                     opers.append(handler(value, val2, va))
                 else:
