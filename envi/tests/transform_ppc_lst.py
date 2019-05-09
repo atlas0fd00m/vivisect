@@ -302,43 +302,91 @@ class ppc_instr(object):
                 self.args.append(lst_parser.Token('TBD', tok, 'TBD', tok.column))
 
         # Ensure that there is at most 1 TBD arg
-        tbd_args = [a for a in self.args if a.type in ['TBD', 'DEC_CONST', 'HEX_CONST']]
+        #tbd_args = [a for a in self.args if a.type in ['TBD', 'DEC_CONST', 'HEX_CONST']]
         # Special case, force all mtspr/mfspr instructions to get the immediate
         # values recalculated
         #if len(tbd_args) == 1 or self.op.value in ['mtspr', 'mfspr']:
-        if len(tbd_args) >= 1:
-            self.fix()
+        #if len(tbd_args) >= 1:
+        self.fix()
 
     def fix(self):
         # IDA listings use some incorrect mnemononics
         rename_mapping = {
-                'eieio':       'mbar',
-                'e_lmvgprw':   'e_ldmvgprw',
-                'e_lmvsprw':   'e_ldmvsprw',
-                'e_lmvsrrw':   'e_ldmvsrrw',
-                'e_lmvcsrrw':  'e_ldmvcsrrw',
-                'e_lmvdsrrw':  'e_ldmvdsrrw',
+            # 'eieio' was the old PPC instruction, it should now be called 'mbar'
+            'eieio':       'mbar',
+            'sync':        'msync',
+            # These new ISR load/store instrucions are misnamed in IDA
+            'e_lmvgprw':   'e_ldmvgprw',
+            'e_lmvsprw':   'e_ldmvsprw',
+            'e_lmvsrrw':   'e_ldmvsrrw',
+            'e_lmvcsrrw':  'e_ldmvcsrrw',
+            'e_lmvdsrrw':  'e_ldmvdsrrw',
+            # These should not be translated eventually.
+            'e_srwi':      'e_rlwinm',
+            'e_srwi.':     'e_rlwinm',
+            'e_extrwi':    'e_rlwinm', 
+            'e_extlwi':    'e_rlwinm',
+            'e_clrlslwi':  'e_rlwinm',
+            'e_clrlwi':    'e_rlwinm',
+            'e_insrwi':    'e_rlwimi',
+            'e_clrrwi':    'e_rlwinm',
+            'e_rotrwi':    'e_rlwinm',
+            'e_rotlwi':    'e_rlwinm',
         }
 
+        cr0_prepend = [
+            'e_bge', 'e_ble', 'e_bne', 'e_beq', 'e_bgt', 'e_blt', 'cmpw', 'cmplw'
+        ]
+
+        cr0_append = [
+            'iselgt', 'isellt', 'iseleq',
+        ]
+
         if self.op.value in rename_mapping:
-            # 'eieio' was the old PPC instruction, it should now be called 'mbar'
             new_op = lst_parser.Token('ASM', self.op.match, rename_mapping[self.op.value], self.op.column)
             self.op = new_op
 
         fixed_args = []
+        changed = False
         for arg in self.args:
             if arg.type in ['TBD', 'DEC_CONST', 'HEX_CONST']:
-                if self.op.value in ppc_instr.Instructions:
+                if self.op.value in ppc_instr.Instructions and not changed:
+                    changed = True
                     new_arg = getattr(self, ppc_instr.Instructions[self.op.value])(self.data.value)
                     if isinstance(new_arg, list):
                         fixed_args.extend(new_arg)
                     else:
                         fixed_args.append(new_arg)
-                else:
+                elif not changed:
                     err = '{} (@ {}) needs fixing ({})'.format(self.op.value, self._line_nr, self._tokens)
                     raise NotImplementedError(err)
             else:
                 fixed_args.append(arg)
+
+        if self.op.value in cr0_prepend and not self.args[0].match[0:2] == 'cr':
+            fixed_args.insert(0, lst_parser.Token('REG', None, 'cr0', None))
+
+        if self.op.value in cr0_append and not self.args[-1].match[0:2] == 'cr':
+            fixed_args.append(lst_parser.Token('REG', None, 'cr0', None))
+
+        # Some move/to SPR instructions are missing the SPR #
+        # (I'm not sure if we should translate these aliases or not)
+        spr_asm = {
+            'mfxer':       'mfspr',
+            'mtxer':       'mtspr',
+        }
+        if self.op.value in spr_asm:
+            new_op = lst_parser.Token('ASM', self.op.match, spr_asm[self.op.value], self.op.column)
+            self.op = new_op
+            
+            if self.op.value == 'mfspr' and fixed_args[-1].type not in ['SPR', 'HEX_CONST', 'DEC_CONST']:
+                new_arg = getattr(self, ppc_instr.Instructions[self.op.value])(self.data.value)
+                fixed_args.append(new_arg)
+
+            if self.op.value == 'mtspr' and fixed_args[0].type not in ['SPR', 'HEX_CONST', 'DEC_CONST']:
+                new_arg = getattr(self, ppc_instr.Instructions[self.op.value])(self.data.value)
+                fixed_args.insert(0, new_arg)
+
         self.args = fixed_args
 
     def __repr__(self):
@@ -388,39 +436,35 @@ class ppc_instr(object):
     def signed_bd8(cls, data):
         sign = 0x0080
         mask = 0x007F
-        val = ((data & mask) - (data & sign)) * 2
+        val = ((data & mask) - (data & sign)) << 1
         return cls._dec_token(val)
         
     @classmethod
     def signed_bd15(cls, data):
-        sign = 0x00004000
-        mask = 0x00003FFF
-        shifted = data >> 1
-        val = ((shifted & mask) - (shifted & sign)) * 2
+        sign = 0x00008000
+        mask = 0x00007FFE
+        val = (data & mask) - (data & sign)
         return cls._dec_token(val)
         
     @classmethod
     def signed_bd24(cls, data):
-        sign = 0x00800000
-        mask = 0x007FFFFF
-        shifted = data >> 1
-        val = ((shifted & mask) - (shifted & sign)) * 2
+        sign = 0x01000000
+        mask = 0x00FFFFFE
+        val = (data & mask) - (data & sign)
         return cls._dec_token(val)
 
     @classmethod
     def signed_i(cls, data):
-        sign = 0x00800000
-        mask = 0x007FFFFF
-        shifted = data >> 2
-        val = ((shifted & mask) - (shifted & sign)) * 4
+        sign = 0x02000000
+        mask = 0x01FFFFFC
+        val = (data & mask) - (data & sign)
         return cls._dec_token(val)
 
     @classmethod
     def signed_b(cls, data):
-        sign = 0x00008000
-        mask = 0x00007FFF
-        shifted = data >> 2
-        val = ((shifted & mask) - (shifted & sign)) * 4
+        sign = 0x00020000
+        mask = 0x0001FFFC
+        val = (data & mask) - (data & sign)
         return cls._dec_token(val)
 
     @classmethod
@@ -528,7 +572,7 @@ class ppc_instr(object):
 
     @classmethod
     def unsigned_x(cls, data):
-        mask = 0x0000F100
+        mask = 0x0000F800
         val = (data & mask) >> 11
 
         # Make hex tokens for logical operation operands
@@ -536,7 +580,7 @@ class ppc_instr(object):
 
     @classmethod
     def unsigned_m(cls, data):
-        mask_1 = 0x0000F100
+        mask_1 = 0x0000F800
         mask_2 = 0x000007C0
         mask_3 = 0x0000003E
         shift = (data & mask_1) >> 11
@@ -635,10 +679,208 @@ class ppc_instr(object):
         mask_2 = 0x001F0000
         up_val = (data & mask_1) >> 6  # upper >> 11 then << 5
         low_val = (data & mask_2) >> 16 # lower >> 16
-        unsigned_val = up_val | low_val
+        val = up_val | low_val
 
-        # For unsigned values return a hex operand
-        return cls._hex_token(unsigned_val)
+        spr_to_str_map = {
+            1: 'XER',
+            8: 'LR',
+            9: 'CTR',
+            22: 'DEC',
+            26: 'SRR0',
+            27: 'SRR1',
+            48: 'PID0',
+            54: 'DECAR',
+            56: 'LPER',
+            57: 'LPERU',
+            58: 'CSRR0',
+            59: 'CSRR1',
+            61: 'DEAR',
+            62: 'ESR',
+            63: 'IVPR',
+            256: 'USPRG0',
+            259: 'SPRG3_USER',
+            260: 'SPRG4_USER',
+            261: 'SPRG5_USER',
+            262: 'SPRG6_USER',
+            263: 'SPRG7_USER',
+            268: 'TBL_USER',
+            269: 'TBU_USER',
+            272: 'SPRG0',
+            273: 'SPRG1',
+            274: 'SPRG2',
+            275: 'SPRG3',
+            276: 'SPRG4',
+            277: 'SPRG5',
+            278: 'SPRG6',
+            279: 'SPRG7',
+            283: 'CIR',
+            284: 'TBL_HYP',
+            285: 'TBU_HYP',
+            286: 'PIR',
+            304: 'DBSR',
+            306: 'DBSRWR',
+            307: 'EPCR',
+            308: 'DBCR0',
+            309: 'DBCR1',
+            310: 'DBCR2',
+            311: 'MSRP',
+            312: 'IAC1',
+            313: 'IAC2',
+            314: 'IAC3',
+            315: 'IAC4',
+            316: 'DAC1',
+            317: 'DAC2',
+            318: 'DVC1',
+            319: 'DVC2',
+            336: 'TSR',
+            338: 'LPIDR',
+            339: 'MAS5',
+            340: 'TCR',
+            341: 'MAS8',
+            342: 'LRATCFG',
+            343: 'LRATPS',
+            344: 'TLB0PS',
+            345: 'TLB1PS',
+            346: 'TLB2PS',
+            347: 'TLB3PS',
+            348: 'MAS5_MAS6',
+            349: 'MAS8_MAS1',
+            350: 'EPTCFG',
+            368: 'GSPRG0',
+            369: 'GSPRG1',
+            370: 'GSPRG2',
+            371: 'GSPRG3',
+            372: 'MAS7_MAS3',
+            373: 'MAS0_MAS1',
+            378: 'GSRR0',
+            379: 'GSRR1',
+            380: 'GEPR',
+            381: 'GDEAR',
+            382: 'GPIR',
+            383: 'GESR',
+            400: 'IVOR0',
+            401: 'IVOR1',
+            402: 'IVOR2',
+            403: 'IVOR3',
+            404: 'IVOR4',
+            405: 'IVOR5',
+            406: 'IVOR6',
+            407: 'IVOR7',
+            408: 'IVOR8',
+            409: 'IVOR9',
+            410: 'IVOR10',
+            411: 'IVOR11',
+            412: 'IVOR12',
+            413: 'IVOR13',
+            414: 'IVOR14',
+            415: 'IVOR15',
+            432: 'IVOR38',
+            433: 'IVOR39',
+            434: 'IVOR40',
+            435: 'IVOR41',
+            436: 'IVOR42',
+            437: 'TENSR',
+            438: 'TENS',
+            439: 'TENC',
+            440: 'GIVOR2',
+            441: 'GIVOR3',
+            442: 'GIVOR4',
+            443: 'GIVOR8',
+            444: 'GIVOR13',
+            445: 'GIVOR14',
+            446: 'TIR',
+            447: 'GIVPR',
+            464: 'GIVOR35',
+            512: 'SPEFSCR',
+            515: 'L1CFG0',
+            516: 'L1CFG1',
+            517: 'NPIDR5',
+            519: 'L2CFG0',
+            526: 'ATBL',
+            527: 'ATBU',
+            528: 'IVOR32',
+            529: 'IVOR33',
+            530: 'IVOR34',
+            531: 'IVOR35',
+            532: 'IVOR36',
+            533: 'IVOR37',
+            561: 'DBCR3',
+            569: 'DBERC0',
+            569: 'MCARU',
+            570: 'MCSRR0',
+            571: 'MCSRR1',
+            572: 'MCSR',
+            573: 'MCAR',
+            574: 'DSRR0',
+            575: 'DSRR1',
+            576: 'DDAM',
+            601: 'DVC1U',
+            602: 'DVC2U',
+            604: 'SPRG8',
+            605: 'SPRG9',
+            606: 'L1CSR2',
+            607: 'L1CSR3',
+            624: 'MAS0',
+            625: 'MAS1',
+            626: 'MAS2',
+            627: 'MAS3',
+            628: 'MAS4',
+            630: 'MAS6',
+            633: 'PID1',
+            634: 'PID2',
+            637: 'MCARUA',
+            638: 'EDBRAC0',
+            688: 'TLB0CFG',
+            689: 'TLB1CFG',
+            690: 'TLB2CFG',
+            691: 'TLB3CFG',
+            696: 'CDCSR0',
+            700: 'DBRR0',
+            702: 'EPR',
+            720: 'L2ERRINTEN',
+            721: 'L2ERRATTR',
+            722: 'L2ERRADDR',
+            723: 'L2ERREADDR',
+            724: 'L2ERRCTL',
+            725: 'L2ERRDIS',
+            730: 'EPIDR',
+            731: 'INTLEVEL',
+            732: 'GEPIDR',
+            733: 'GINTLEVEL',
+            898: 'PPR32',
+            944: 'MAS7',
+            947: 'EPLC',
+            948: 'EPSC',
+            959: 'L1FINV1',
+            975: 'DEVENT',
+            983: 'NSPD',
+            984: 'NSPC',
+            985: 'L2ERRINJHI',
+            986: 'L2ERRINJLO',
+            987: 'L2ERRINJCTL',
+            988: 'L2CAPTDATAHI',
+            989: 'L2CAPTDATALO',
+            990: 'L2CAPTECC',
+            991: 'L2ERRDET',
+            1008: 'HID0',
+            1009: 'HID1',
+            1010: 'L1CSR0',
+            1011: 'L1CSR1',
+            1012: 'MMUCSR0',
+            1013: 'BUCSR0',
+            1015: 'MMUCFG',
+            1016: 'L1FINV0',
+            1017: 'L2CSR0',
+            1018: 'L2CSR1',
+            1019: 'PWRMGTCR0',
+            1022: 'SCCSRBAR',
+            1023: 'SVR',
+        }
+
+        if val in spr_to_str_map:
+            return lst_parser.Token('SPR', hex(val), spr_to_str_map[val], None)
+        else:
+            return lst_parser.Token('HEX_CONST', hex(val), val, None)
 
     @classmethod
     def xfx(cls, data):
