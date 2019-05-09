@@ -28388,7 +28388,7 @@ instructions = [
 	('7C1FD8EE', 'lbzux r0,r31,r27'),
 	('7C1FD9AE', 'stbx r0,r31,r27'),
 	('7C1FEA30', 'e_rlw r31,r0,r29'),
-	('7C2006AC', 'mbar 0x0'),
+	('7C2006AC', 'mbar 0x1'),
 	('7C21616E', 'stwux r1,r1,r12'),
 	('7C319BA6', 'mtspr MAS1,r1'),
 	('7C529BA6', 'mtspr MAS2,r2'),

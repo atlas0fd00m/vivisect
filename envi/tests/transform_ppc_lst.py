@@ -693,7 +693,7 @@ class ppc_instr(object):
     @classmethod
     def xfx_field1(cls, data):
         mask = 0x003E0000
-        val = (data & mask) >> 22
+        val = (data & mask) >> 21
         return cls._hex_token(val)
 
     @classmethod
