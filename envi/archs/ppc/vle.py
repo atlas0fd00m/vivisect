@@ -22,7 +22,6 @@ operands = (
         None,
         PpcRegOper,
         PpcRegOper,
-        PpcRegOper,
         PpcImmOper,
         PpcSImm32Oper,
         PpcMemOper,
@@ -64,13 +63,13 @@ def case_E_D(types, data, va):
     
     # holy crap, this table is a mess.  too C-ish, not Pythonic.
     if types[1] == TYPE_MEM:
-        if types[2] == TYPE_REG_Z and val1 == 0:
+        if types[2] == TYPE_REG and val1 == 0:
             opers = ( op0(val0, va), PpcImmOper(val2, va) )
         else:
             opers = ( op0(val0, va), op1(val1, val2, va) )
     else:
         op2 = operands[types[2]]
-        opers = ( op0(val0, va), op1(val1, va), op2(val2, va) )  # holy crap, this table is a mess.  too C-ish, not Pythonic.
+        opers = ( op0(val0, va), op1(val1, va), op2(val2, va) )
 
     return opers
 
@@ -231,8 +230,8 @@ def case_E_I16LS(types, data, va):
     return opers
 
 def case_E_BD24(types, data, va):
-    val0 = data & 0x1FFFFFE;
-    if (val0 & 0x100000):
+    val0 = data & 0x01FFFFFE;
+    if (val0 & 0x01000000):
         val0 |= 0xFE000000;
 
     op0 = operands[types[0]]
@@ -241,15 +240,26 @@ def case_E_BD24(types, data, va):
     return opers
 
 def case_E_BD15(types, data, va):
-    val0 = (data & 0xC0000) >> 18;
-    op0 = operands[types[0]]
     val1 = data & 0xFFFE;
     if (val1 & 0x8000):
         val1 |= 0xFFFF0000;
     
     op1 = operands[types[1]]
 
-    opers = ( op0(val0, va), op1(val1, va) )
+    if (data & 0x00200000) == 0x00200000:
+        # If this is a CTR related branch conditional, the register to check
+        # the value for is always the CTR SPR (SPR 9).
+        #val0 = 9 + REG_OFFSET_SPR
+        #op0 = operands[types[0]]
+
+        #opers = ( op0(val0, va), op1(val1, va) )
+        opers = ( op1(val1, va), )
+    else:
+        val0 = (data & 0xC0000) >> 18;
+        op0 = operands[types[0]]
+
+        opers = ( op0(val0, va), op1(val1, va) )
+
     return opers
 
 def case_E_LI20(types, data, va):
@@ -349,6 +359,14 @@ def case_F_X_2(types, data, va):
 
     return opers
 
+def case_F_X_WRTEEI(types, data, va):
+    # Can't figure out a good generic way to do this with the F_X handler
+    val0 = (data & 0x00008000) >> 15
+    op0 = operands[types[0]]
+    opers = ( op0(val0, va), )
+    return opers
+
+
 def case_F_XRA(types, data, va):
     val1 = (data & 0x3E00000) >> 21;
     op1 = operands[types[0]]
@@ -422,9 +440,13 @@ def case_F_A(types, data, va):
         opers.append(op0(val0, va))
 
     if types[1] != TYPE_NONE:
+        # If this type is REG and the value is 0, add a constant 0 instead
         val1 = (data & 0x1F0000) >> 16;
-        op1 = operands[types[1]]
-        opers.append(op1(val1, va))
+        if types[1] == TYPE_REG and val1 == 0:
+            opers.append(PpcImmOper(val1, va))
+        else:
+            op1 = operands[types[1]]
+            opers.append(op1(val1, va))
 
     if types[2] != TYPE_NONE:
         val2 = (data & 0xF800) >> 11;
@@ -432,7 +454,11 @@ def case_F_A(types, data, va):
         opers.append(op2(val2, va))
 
     if types[3] != TYPE_NONE:
-        val3 = (data & 0x7C0) >> 6;
+        # If the type is CR, then use only the upper 3 bits
+        if types[3] == TYPE_CR:
+            val3 = (data & 0x700) >> 8;
+        else:
+            val3 = (data & 0x7C0) >> 6;
         op3 = operands[types[3]]
         opers.append(op3(val3, va))
 
@@ -453,31 +479,31 @@ def case_F_XER(types, data, va):
     return opers
 
 def case_F_MFPR(types, data, va):
+    # From register is first arg
     val0 = (data & 0x1E00000) >> 21;
     op0 = operands[types[0]]
+
+    # To SPR is second arg
     val1 = (data & 0x1F0000) >> 16
     val1 |= (data &  0xF800) >> 6
     val1 += REG_OFFSET_SPR
     op1 = operands[types[1]]
-    #print op0, val0, op1, val1
+
     opers = ( op0(val0, va), op1(val1, va))
     return opers
 
 def case_F_MTPR(types, data, va):
-    #inverted
-    opers = []
-    if types[0] != TYPE_NONE:
-        val0 = (data & 0x001F0000) >> 16
-        val0 |= (data &  0x00F800) >> 6
-        val0 += REG_OFFSET_SPR
-        op0 = operands[types[0]]
-        opers.append(op0(val0, va))
+    # To SPR is first arg
+    val0 = (data & 0x1F0000) >> 16
+    val0 |= (data &  0xF800) >> 6
+    val0 += REG_OFFSET_SPR
+    op0 = operands[types[0]]
 
-    if types[1] != TYPE_NONE:
-        val1 = (data & 0x1E00000) >> 21;
-        op1 = operands[types[1]]
-        opers.append(op1(val1, va))
+    # From register is second arg
+    val1 = (data & 0x1E00000) >> 21;
+    op1 = operands[types[1]]
 
+    opers = ( op0(val0, va), op1(val1, va))
     return opers
 
 def case_F_NONE(types, data, va):
@@ -514,6 +540,7 @@ ppc_handlers = {
         F_XO: case_F_XO,
         F_XRA: case_F_XRA,
         F_X_2: case_F_X_2,
+        F_X_WRTEEI: case_F_X_WRTEEI,
         F_EVX: case_F_EVX,
         F_CMP: case_F_CMP,
         F_DCBF: case_F_DCBF,
@@ -544,6 +571,25 @@ def find_ppc(buf, offset, endian=True, va=0):
                 raise Exception("Unknown FORM handler: %x" % form)
 
             opers = handler(types, data, va)
+
+            # Some instrucions have aliases that depend on some of the
+            # instruction parameters matching and can't be identified with
+            # static masks
+            mnem_alises = {
+                'or': 'mr',
+                'or.': 'mr.',
+                'nor': 'not',
+                'nor.': 'not.',
+            }
+            if mnem in mnem_alises:
+                # For this to be valid there must be 3 register arguments and
+                # the last two must match.
+                if len(opers) == 3 and \
+                        isinstance(opers[1], PpcRegOper) and \
+                        isinstance(opers[2], PpcRegOper) and \
+                        opers[1].reg == opers[2].reg:
+                    mnem = mnem_alises[mnem]
+                    opers = opers[0:-1]
 
             iflags |= envi.ARCH_PPCVLE
             return PpcOpcode(va, 0, mnem, size=size, operands=opers, iflags=iflags)
