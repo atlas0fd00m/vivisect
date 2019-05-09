@@ -466,7 +466,7 @@ def case_F_EXT(types, data, va):
 def case_F_A(types, data, va):
     opers = []
     if types[0] != TYPE_NONE:
-        val0 = (data & 0x1E00000) >> 21;
+        val0 = (data & 0x3E00000) >> 21;
         op0 = operands[types[0]]
         opers.append(op0(val0, va))
 
