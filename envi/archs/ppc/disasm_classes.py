@@ -485,7 +485,7 @@ class PpcJmpOper(envi.RegisterOper):
 
     def repr(self, op):
         targ = self.getOperValue(op)
-        tname = "0x%.8x" % targ
+        tname = "%#x" % targ
         return tname
 
 fields = (None, 'c', 'x', 'cx', 's', 'cs', 'xs', 'cxs',  'f', 'fc', 'fx', 'fcx', 'fs', 'fcs', 'fxs', 'fcxs')
@@ -526,7 +526,6 @@ class PpcCrOper(envi.RegisterOper):
         return newpsr
 
     def repr(self, op):
-        #return "cr_" + fields[self.val]
         return "cr%u" % self.val
 
     def render(self, mcanv, op, idx):
