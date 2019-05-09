@@ -68,6 +68,7 @@ F_MTPR = 13
 F_XRA =  14
 F_X_2 =  15
 F_X_WRTEEI = 16
+F_X_MTCRF = 17
 
 
 F_MASK_X =     0x03FFF800

@@ -190,7 +190,7 @@ ppc_ops = (
   # TODO: ERM, these won't actually go through the E_XL codepatH?
   # they'll actually get picked up as F_XO. thankfully, that seems to be correct still?
   ( "mfcr"       , 0x7C000026, 0x7C000026 | F_MASK_XO  ,   F_XO ,   INS_MOV, COND_AL, (TYPE_REG, TYPE_NONE, TYPE_NONE, TYPE_NONE, TYPE_NONE), IFLAGS_NONE),
-  ( "mtcrf"      , 0x7C000120, 0x7C000120 | F_MASK_XO  ,   F_XO ,   INS_MOV, COND_AL, (TYPE_REG, TYPE_IMM, TYPE_NONE, TYPE_NONE, TYPE_NONE), IFLAGS_NONE), #crf rossz
+  ( "mtcrf"      , 0x7C000120, 0x7C000120 | F_MASK_XO, F_X_MTCRF,   INS_MOV, COND_AL, (TYPE_REG, TYPE_IMM, TYPE_NONE, TYPE_NONE, TYPE_NONE), IFLAGS_NONE), #crf rossz
 );
 
 e_ops = (

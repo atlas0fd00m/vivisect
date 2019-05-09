@@ -280,8 +280,9 @@ class ppc_instr(object):
         'mfspr':        'xfx_spr',                 # XFX: Special Purpose Register
 
         # Other
-        'mbar':         'xfx',                     # XFX: special MO flag
+        'mbar':         'xfx_field1',              # XFX: special MO flag
         'wrteei':       'wrteei',                  # X:   special E flag
+        'mtcrf':        'mtcrf',                   # XFX: special CRM flag values
     }
 
     def __init__(self, tokens, line_nr):
@@ -300,13 +301,6 @@ class ppc_instr(object):
                 self.args.append(tok)
             elif tok.type in ['LABEL', 'LABEL_MATH']:
                 self.args.append(lst_parser.Token('TBD', tok, 'TBD', tok.column))
-
-        # Ensure that there is at most 1 TBD arg
-        #tbd_args = [a for a in self.args if a.type in ['TBD', 'DEC_CONST', 'HEX_CONST']]
-        # Special case, force all mtspr/mfspr instructions to get the immediate
-        # values recalculated
-        #if len(tbd_args) == 1 or self.op.value in ['mtspr', 'mfspr']:
-        #if len(tbd_args) >= 1:
         self.fix()
 
     def fix(self):
@@ -324,14 +318,15 @@ class ppc_instr(object):
             # These should not be translated eventually.
             'e_srwi':      ('74', 'e_rlwinm'),
             'e_srwi.':     ('74', 'e_rlwinm'),
-            'e_extrwi':    (None,   'e_rlwinm'), 
-            'e_extlwi':    (None,   'e_rlwinm'),
-            'e_clrlslwi':  (None,   'e_rlwinm'),
-            'e_clrlwi':    (None,   'e_rlwinm'),
-            'e_insrwi':    (None,   'e_rlwimi'),
-            'e_clrrwi':    (None,   'e_rlwinm'),
-            'e_rotrwi':    (None,   'e_rlwinm'),
-            'e_rotlwi':    (None,   'e_rlwinm'),
+            'e_extrwi':    (None, 'e_rlwinm'), 
+            'e_extlwi':    (None, 'e_rlwinm'),
+            'e_clrlslwi':  (None, 'e_rlwinm'),
+            'e_clrlwi':    (None, 'e_rlwinm'),
+            'e_insrwi':    (None, 'e_rlwimi'),
+            'e_clrrwi':    (None, 'e_rlwinm'),
+            'e_rotrwi':    (None, 'e_rlwinm'),
+            'e_rotlwi':    (None, 'e_rlwinm'),
+            'mtcr':        (None, 'mtcrf'),
         }
 
         cr0_prepend = [
@@ -342,7 +337,12 @@ class ppc_instr(object):
             'iselgt', 'isellt', 'iseleq',
         ]
 
-        if self.op.value in rename_mapping and rename_mapping[self.op.value][0] in [None, self.data.match[0:2]]:
+        if self.op.value in rename_mapping and \
+                rename_mapping[self.op.value][0] in [None, self.data.match[0:2]]:
+            # mtcr needs additional parsing of fields
+            if self.op.value == 'mtcr':
+                self.args.append(lst_parser.Token('TBD', None, 'TBD', None))
+
             new_op = lst_parser.Token('ASM', self.op.match, rename_mapping[self.op.value][1], self.op.column)
             self.op = new_op
 
@@ -374,6 +374,10 @@ class ppc_instr(object):
         spr_asm = {
             'mfxer':       'mfspr',
             'mtxer':       'mtspr',
+            'mflr':        'mfspr',
+            'mtlr':        'mtspr',
+            'mfctr':       'mfspr',
+            'mtctr':       'mtspr',
         }
         if self.op.value in spr_asm:
             new_op = lst_parser.Token('ASM', self.op.match, spr_asm[self.op.value], self.op.column)
@@ -674,13 +678,29 @@ class ppc_instr(object):
         return cls._hex_token(val)
 
     @classmethod
-    def xfx_spr(cls, data):
+    def _get_xfx_field2(cls, data):
         mask_1 = 0x0000F800
         mask_2 = 0x001F0000
         up_val = (data & mask_1) >> 6  # upper >> 11 then << 5
         low_val = (data & mask_2) >> 16 # lower >> 16
         val = up_val | low_val
+        return val
 
+    @classmethod
+    def xfx_field1(cls, data):
+        mask = 0x003E0000
+        val = (data & mask) >> 22
+        return cls._hex_token(val)
+
+    @classmethod
+    def xfx_field2(cls, data):
+        val = cls._get_xfx_field2(data)
+        print((hex(data), hex(val)))
+        return cls._hex_token(val)
+
+    @classmethod
+    def xfx_spr(cls, data):
+        val = cls._get_xfx_field2(data)
         spr_to_str_map = {
             1: 'XER',
             8: 'LR',
@@ -883,20 +903,16 @@ class ppc_instr(object):
             return lst_parser.Token('HEX_CONST', hex(val), val, None)
 
     @classmethod
-    def xfx(cls, data):
-        mask = 0x003E0000
-        val = (data & mask) >> 22
-
-        # For unsigned values return a hex operand
-        return cls._hex_token(val)
-
-    @classmethod
     def wrteei(cls, data):
         mask = 0x00008000
         val = (data & mask) >> 15
-
-        # For unsigned values return a hex operand
         return cls._dec_token(val)
+
+    @classmethod
+    def mtcrf(cls, data):
+        mask = 0x000FF000
+        val = (data & mask) >> 12
+        return cls._hex_token(val)
 
 
 def parse(lst_lines):

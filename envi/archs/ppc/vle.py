@@ -366,6 +366,17 @@ def case_F_X_WRTEEI(types, data, va):
     opers = ( op0(val0, va), )
     return opers
 
+def case_F_X_MTCRF(types, data, va):
+    # Can't figure out a good generic way to do this with the F_X or F_XFX or
+    # F_XO handlers
+    val0 = (data & 0x3E00000) >> 21;
+    op0 = operands[types[0]]
+
+    val1 = (data & 0x000FF000) >> 12
+    op1 = operands[types[1]]
+
+    opers = ( op0(val0, va), op1(val1, va) )
+    return opers
 
 def case_F_XRA(types, data, va):
     val1 = (data & 0x3E00000) >> 21;
@@ -541,6 +552,7 @@ ppc_handlers = {
         F_XRA: case_F_XRA,
         F_X_2: case_F_X_2,
         F_X_WRTEEI: case_F_X_WRTEEI,
+        F_X_MTCRF: case_F_X_MTCRF,
         F_EVX: case_F_EVX,
         F_CMP: case_F_CMP,
         F_DCBF: case_F_DCBF,
