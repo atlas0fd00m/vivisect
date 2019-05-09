@@ -378,6 +378,10 @@ class ppc_instr(object):
             'mtlr':        'mtspr',
             'mfctr':       'mfspr',
             'mtctr':       'mtspr',
+            'mfsrr0':      'mfspr',
+            'mtsrr0':      'mtspr',
+            'mfsrr1':      'mfspr',
+            'mtsrr1':      'mtspr',
         }
         if self.op.value in spr_asm:
             new_op = lst_parser.Token('ASM', self.op.match, spr_asm[self.op.value], self.op.column)
