@@ -314,8 +314,6 @@ def case_E_NONE(types, data, va):
     opers = tuple()
     return opers
 
-
-
 def case_F_EVX(types, data, va):
     opers = []
     if (types[0] != TYPE_NONE):
@@ -328,6 +326,28 @@ def case_F_EVX(types, data, va):
         val1 = (data & 0x1F0000) >> 16;
         op1 = operands[types[1]]
         opers.append(op1(val1, va))
+
+    if (types[2] != TYPE_NONE):
+        val2 = (data & 0xF800) >> 11;
+        op2 = operands[types[2]]
+        opers.append(op2(val2, va))
+
+    return opers
+
+def case_F_X_Z(types, data, va):
+    opers = []
+    if (types[0] != TYPE_NONE):
+        val0 = (data & 0x3E00000) >> 21;
+        op0 = operands[types[0]]
+        opers.append(op0(val0, va))
+
+    if (types[1] != TYPE_NONE):
+        val1 = (data & 0x1F0000) >> 16;
+        if types[1] == TYPE_REG and val1 == 0:
+            opers.append(PpcImmOper(val1, va))
+        else:
+            op1 = operands[types[1]]
+            opers.append(op1(val1, va))
 
     if (types[2] != TYPE_NONE):
         val2 = (data & 0xF800) >> 11;
@@ -491,12 +511,12 @@ def case_F_XER(types, data, va):
 
 def case_F_MFPR(types, data, va):
     # From register is first arg
-    val0 = (data & 0x1E00000) >> 21;
+    val0 = (data & 0x03E00000) >> 21;
     op0 = operands[types[0]]
 
     # To SPR is second arg
-    val1 = (data & 0x1F0000) >> 16
-    val1 |= (data &  0xF800) >> 6
+    val1 =  (data & 0x001F0000) >> 16
+    val1 |= (data & 0x0000F800) >> 6
     val1 += REG_OFFSET_SPR
     op1 = operands[types[1]]
 
@@ -505,13 +525,13 @@ def case_F_MFPR(types, data, va):
 
 def case_F_MTPR(types, data, va):
     # To SPR is first arg
-    val0 = (data & 0x1F0000) >> 16
-    val0 |= (data &  0xF800) >> 6
+    val0 =  (data & 0x001F0000) >> 16
+    val0 |= (data & 0x0000F800) >> 6
     val0 += REG_OFFSET_SPR
     op0 = operands[types[0]]
 
     # From register is second arg
-    val1 = (data & 0x1E00000) >> 21;
+    val1 = (data & 0x03E00000) >> 21;
     op1 = operands[types[1]]
 
     opers = ( op0(val0, va), op1(val1, va))
@@ -553,6 +573,7 @@ ppc_handlers = {
         F_X_2: case_F_X_2,
         F_X_WRTEEI: case_F_X_WRTEEI,
         F_X_MTCRF: case_F_X_MTCRF,
+        F_X_Z: case_F_X_Z,
         F_EVX: case_F_EVX,
         F_CMP: case_F_CMP,
         F_DCBF: case_F_DCBF,
