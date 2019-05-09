@@ -313,25 +313,25 @@ class ppc_instr(object):
         # IDA listings use some incorrect mnemononics
         rename_mapping = {
             # 'eieio' was the old PPC instruction, it should now be called 'mbar'
-            'eieio':       'mbar',
-            'sync':        'msync',
+            'eieio':       (None, 'mbar'),
+            'sync':        (None, 'msync'),
             # These new ISR load/store instrucions are misnamed in IDA
-            'e_lmvgprw':   'e_ldmvgprw',
-            'e_lmvsprw':   'e_ldmvsprw',
-            'e_lmvsrrw':   'e_ldmvsrrw',
-            'e_lmvcsrrw':  'e_ldmvcsrrw',
-            'e_lmvdsrrw':  'e_ldmvdsrrw',
+            'e_lmvgprw':   (None, 'e_ldmvgprw'),
+            'e_lmvsprw':   (None, 'e_ldmvsprw'),
+            'e_lmvsrrw':   (None, 'e_ldmvsrrw'),
+            'e_lmvcsrrw':  (None, 'e_ldmvcsrrw'),
+            'e_lmvdsrrw':  (None, 'e_ldmvdsrrw'),
             # These should not be translated eventually.
-            'e_srwi':      'e_rlwinm',
-            'e_srwi.':     'e_rlwinm',
-            'e_extrwi':    'e_rlwinm', 
-            'e_extlwi':    'e_rlwinm',
-            'e_clrlslwi':  'e_rlwinm',
-            'e_clrlwi':    'e_rlwinm',
-            'e_insrwi':    'e_rlwimi',
-            'e_clrrwi':    'e_rlwinm',
-            'e_rotrwi':    'e_rlwinm',
-            'e_rotlwi':    'e_rlwinm',
+            'e_srwi':      ('74', 'e_rlwinm'),
+            'e_srwi.':     ('74', 'e_rlwinm'),
+            'e_extrwi':    (None,   'e_rlwinm'), 
+            'e_extlwi':    (None,   'e_rlwinm'),
+            'e_clrlslwi':  (None,   'e_rlwinm'),
+            'e_clrlwi':    (None,   'e_rlwinm'),
+            'e_insrwi':    (None,   'e_rlwimi'),
+            'e_clrrwi':    (None,   'e_rlwinm'),
+            'e_rotrwi':    (None,   'e_rlwinm'),
+            'e_rotlwi':    (None,   'e_rlwinm'),
         }
 
         cr0_prepend = [
@@ -342,8 +342,8 @@ class ppc_instr(object):
             'iselgt', 'isellt', 'iseleq',
         ]
 
-        if self.op.value in rename_mapping:
-            new_op = lst_parser.Token('ASM', self.op.match, rename_mapping[self.op.value], self.op.column)
+        if self.op.value in rename_mapping and rename_mapping[self.op.value][0] in [None, self.data.match[0:2]]:
+            new_op = lst_parser.Token('ASM', self.op.match, rename_mapping[self.op.value][1], self.op.column)
             self.op = new_op
 
         fixed_args = []
