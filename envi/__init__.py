@@ -12,6 +12,8 @@ import platform
 import importlib
 import contextlib
 
+import envi.symstore.resolver as e_resolv
+
 from envi.exc import *
 
 logger = logging.getLogger(__name__)
@@ -117,9 +119,8 @@ arch_defs = {
     ARCH_A64:       {
         'name':     'a64',
         'aliases':  ('aarch64', 'leg64', 'legv8'),
-        'modpath':  ('envi', 'archs', 'a64'),
+        'modpath':  ('envi', 'archs', 'aarch64'),
         'clsname':  'A64Module',
-        'disabled': True,
         'version':  (0,2,0),
         'has_disasm':   True,
         'has_emu':      True,
@@ -154,7 +155,6 @@ arch_defs = {
         'aliases':  ('8051', '80x51'),
         'modpath':  ('envi', 'archs', 'mcs51'),
         'clsname':  'Mcs51Module',
-        'disabled': True,
         'version':  (0,5,0),
         'has_disasm':   True,
         'has_emu':      True,
@@ -192,7 +192,6 @@ arch_defs = {
         'aliases':  ('ppc32',),
         'modpath':  ('envi', 'archs', 'ppc'),
         'clsname':  'Ppc32EmbeddedModule',
-        'disabled': True,
         'version':  (1,0,0),
         'has_disasm':   True,
         'has_emu':      True,
@@ -205,7 +204,6 @@ arch_defs = {
         'aliases':  ('ppc64-embedded','ppc-spe'),
         'modpath':  ('envi', 'archs', 'ppc'),
         'clsname':  'Ppc64EmbeddedModule',
-        'disabled': True,
         'version':  (1,0,0),
         'has_disasm':   True,
         'has_emu':      True,
@@ -218,7 +216,6 @@ arch_defs = {
         'modpath':  ('envi', 'archs', 'ppc32-server', 'Module'),
         'modpath':  ('envi', 'archs', 'ppc'),
         'clsname':  'Ppc32ServerModule',
-        'disabled': True,
         'version':  (0,9,0),
         'has_disasm':   True,
         'has_emu':      True,
@@ -231,7 +228,6 @@ arch_defs = {
         'aliases':  ('ppc64-server','altivec', 'ppc-altivec'),
         'modpath':  ('envi', 'archs', 'ppc'),
         'clsname':  'Ppc64ServerModule',
-        'disabled': True,
         'version':  (0,9,0),
         'has_disasm':   True,
         'has_emu':      True,
@@ -244,7 +240,6 @@ arch_defs = {
         'aliases':  ('vle','ppc32-vle', 'ppcvle'),
         'modpath':  ('envi', 'archs', 'ppc'),
         'clsname':  'PpcVleModule',
-        'disabled': True,
         'version':  (1,0,0),
         'has_disasm':   True,
         'has_emu':      True,
@@ -256,7 +251,6 @@ arch_defs = {
         'name':     'ppc-desktop',
         'modpath':  ('envi', 'archs', 'ppc'),
         'clsname':  'PpcDesktopModule',
-        'disabled': True,
         'version':  (0,5,0),
         'has_disasm':   True,
         'has_emu':      True,
@@ -269,7 +263,6 @@ arch_defs = {
         'aliases':  ('rxv2', 'rxv1', 'rx'),
         'modpath':  ('envi', 'archs', 'rx'),
         'clsname':  'RxModule',
-        'disabled': True,
         'version':  (0,5,0),
         'has_disasm':   True,
         'has_emu':      False,
@@ -281,7 +274,6 @@ arch_defs = {
         'name':     'sparc',
         'modpath':  ('envi', 'archs', 'sparc'),
         'clsname':  'SparcModule',
-        'disabled': True,
         'version':  (0,1,0),
         'has_disasm':   True,
         'has_emu':      False,
@@ -293,8 +285,8 @@ arch_defs = {
         'name':     'sparc64',
         'modpath':  ('envi', 'archs', 'sparc64'),
         'clsname':  'Sparc64Module',
-        'disabled': True,
         'version':  (0,1,0),
+        'disabled': True,
         'has_disasm':   True,
         'has_emu':      False,
         'has_symboliks':False,
@@ -306,7 +298,6 @@ arch_defs = {
         'aliases':  ('mips',),
         'modpath':  ('envi', 'archs', 'mips'),
         'clsname':  'Mips32Module',
-        'disabled': True,
         'version':  (0,1,0),
         'has_disasm':   True,
         'has_emu':      False,
