@@ -46,15 +46,6 @@ ARCH_MIPS64      = 22 << 16
 
 ARCH_MASK        = 0xffff0000   # Masked into IF_FOO and BR_FOO values
 
-# Code Maturity Ratings.  Also used for Unittest categories
-MAT_NONE = 0            # does not exist
-MAT_ALPHA = 1           # code exists, but immature.  no promises
-MAT_BETA = 2            # kinda works, not overly confident
-MAT_TESTING = 3         # works ok, initial RC
-MAT_PROD = 4            # production
-
-maturity = {v:k for k,v in globals().items() if k.startswith('MAT_')}
-
 
 arch_defs = {
     ARCH_I386:      {
@@ -285,8 +276,8 @@ arch_defs = {
         'name':     'sparc64',
         'modpath':  ('envi', 'archs', 'sparc64'),
         'clsname':  'Sparc64Module',
-        'version':  (0,1,0),
         'disabled': True,
+        'version':  (0,1,0),
         'has_disasm':   True,
         'has_emu':      False,
         'has_symboliks':False,
