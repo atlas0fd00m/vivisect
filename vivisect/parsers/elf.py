@@ -993,7 +993,7 @@ def applyRelocs(elf, vw, addbase=False, baseoff=0):
                         logger.warning(r.tree())
 
 
-            if arch in ('arm', 'thumb', 'thumb16'):
+            if arch in ('arm', 'thumb', 'thumb16', 'a64', 'aarch64'):
                 # ARM REL entries require an addend that could be stored as a
                 # number or an instruction!
                 import envi.archs.arm.const as eaac
