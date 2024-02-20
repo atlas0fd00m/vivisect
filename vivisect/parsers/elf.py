@@ -227,6 +227,7 @@ arch_names = {
     Elf.EM_PPC: 'ppc32-server',
     Elf.EM_PPC64: 'ppc-server',
     Elf.EM_ARM_AARCH64: 'aarch64',
+    Elf.EM_RISCV: {32: 'rv32', 64: 'rv64'},
 }
 
 ppc_arch_names = (
@@ -265,6 +266,11 @@ archcalls = {
     'ppc-embedded': 'ppccall',
     'ppc32-server': 'ppccall',
     'ppc-server': 'ppccall',
+
+    # Assume the default calling convention names for the standard RISC-V 32 and
+    # 64-bit architectures
+    'rv32': 'ilp32d',
+    'rv64': 'lp64d',
 }
 
 def getAddBaseAddr(elf, baseaddr=None):
