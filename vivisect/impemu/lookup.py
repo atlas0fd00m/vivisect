@@ -7,6 +7,7 @@ import vivisect.impemu.platarch.a64 as v_i_a64
 import vivisect.impemu.platarch.ppc as v_i_ppc
 import vivisect.impemu.platarch.i386 as v_i_i386
 import vivisect.impemu.platarch.amd64 as v_i_amd64
+import vivisect.impemu.platarch.mcs51 as v_i_mcs51
 import vivisect.impemu.platarch.msp430 as v_i_msp430
 
 import vivisect.impemu.platarch.linux as v_i_linux
@@ -30,6 +31,7 @@ workspace_emus  = {
     'altivec': v_i_ppc.Ppc64ServerWorkspaceEmulator,
     'i386': v_i_i386.i386WorkspaceEmulator,
     'amd64': v_i_amd64.Amd64WorkspaceEmulator,
+    'mcs51': v_i_mcs51.Mcs51WorkspaceEmulator,
     'msp430': v_i_msp430.Msp430WorkspaceEmulator,
     'thumb': v_i_arm.ThumbWorkspaceEmulator,
     'thumb16': v_i_arm.Thumb16WorkspaceEmulator,

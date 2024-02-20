@@ -145,7 +145,7 @@ arch_defs = {
         'aliases':  ('8051', '80x51'),
         'modpath':  ('envi', 'archs', 'mcs51'),
         'clsname':  'Mcs51Module',
-        'disabled': True,
+        'disabled': False,
         'version':  (0,5,0),
         'has_disasm':   True,
         'has_emu':      True,
