@@ -273,7 +273,7 @@ arch_defs = {
         'name':     'sparc',
         'modpath':  ('envi', 'archs', 'sparc'),
         'clsname':  'SparcModule',
-        'disabled': True,
+        'disabled': False,
         'version':  (0,1,0),
         'has_disasm':   True,
         'has_emu':      False,
