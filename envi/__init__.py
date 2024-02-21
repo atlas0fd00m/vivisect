@@ -171,7 +171,7 @@ arch_defs = {
         'aliases':  ('riscv64',),
         'modpath':  ('envi', 'archs', 'riscv'),
         'clsname':  'RiscV64Module',
-        'disabled': True,
+        'disabled': False,
         'version':  (0,5,0),
         'has_disasm':   True,
         'has_emu':      True,
