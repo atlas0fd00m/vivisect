@@ -1,3 +1,5 @@
+import logging
+
 import visgraph.pathcore as vg_pathcore
 import vivisect.tools.graphutil as viv_graph
 import vivisect.symboliks.effects as vsym_effects
@@ -7,6 +9,8 @@ from vivisect.const import *
 from vivisect.symboliks.common import *
 
 import visgraph.graphcore as v_graphcore
+
+logger = logging.getLogger(__name__)
 
 class SymbolikFunctionGraph(v_graphcore.HierGraph):
 
@@ -719,5 +723,10 @@ def getSymbolikAnalysisContext(vw, consolve=False):
     elif arch in ('ppc-server', 'ppc64-server'):
         import vivisect.symboliks.archs.ppc as vsym_ppc
         return vsym_ppc.Ppc64ServerSymbolikAnalysisContext(vw)
+    elif arch == 'arm':
+        import vivisect.symboliks.archs.arm32 as vsym_arm32
+        return vsym_arm32.A32SymbolikAnalysisContext(vw)
+
+    logger.warn("Architecture Symboliks subsystem not implemented: %r", arch)
 
     return None
