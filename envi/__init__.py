@@ -295,7 +295,7 @@ arch_defs = {
     ARCH_MIPS32:    {
         'name':     'mips32',
         'aliases':  ('mips',),
-        'modpath':  ('envi', 'archs', 'mips32'),
+        'modpath':  ('envi', 'archs', 'mips'),
         'clsname':  'Mips32Module',
         'disabled': True,
         'version':  (0,1,0),
