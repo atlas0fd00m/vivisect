@@ -29,9 +29,10 @@ viv_port = 0x4074
 viv_s_ip = '224.56.56.56'
 viv_s_port = 26998
 
-timeo_wait = 10
-timeo_sock = 50
-timeo_aban = 120   # 2 minute timeout for abandon
+# DEFAULTS for non-configured use
+timeout_wait = 10
+timeout_sock = 50
+timeout_aban = 120   # 2 minute timeout for abandon
 
 # This should *only* rev when they're truly incompatible
 server_version = 20130820
@@ -162,6 +163,9 @@ class VivServer:
             self.vivhome = e_config.gethomedir(".viv", makedir=True)
         cfgpath = os.path.join(self.vivhome, 'viv.json')
         self.config = e_config.EnviConfig(filename=cfgpath, defaults=defconfig, docs=docconfig, autosave=True)
+
+        self.timeout_wait = self.config.viv.remote.timeout_wait
+        self.timeout_aban = self.config.viv.remote.timeout_aban
         self.wsdict = {}
         self.chandict = {}
         self.wslock = threading.Lock()
@@ -186,7 +190,7 @@ class VivServer:
                 continue
 
             wsinfo, queue, chanleaders = chaninfo
-            if queue.abandoned(timeo_aban):
+            if queue.abandoned(self.timeout_aban):
                 self.cleanupChannel(chan)
 
     @e_threads.maintthread(30)
@@ -266,7 +270,7 @@ class VivServer:
         if chaninfo is None:
             raise Exception('Invalid Channel: %s' % chan)
         logger.debug("getNextEvents(%r)", repr(chaninfo))
-        return chaninfo[1].get(timeout=timeo_wait)
+        return chaninfo[1].get(timeout=self.timeout_wait)
 
     # All APIs from here down are basically mirrors of the workspace APIs
     # used with remote workspaces, with a prepended chan first argument
@@ -351,6 +355,7 @@ class VivServer:
             fileevts.extend(pevents)
             # use this firethread function to add events while we return the channel
             queue.asyncAddLargeEventList(fileevts)
+            queue.chunkedAddLargeEventList(fileevts)
 
         return chan
 
@@ -384,6 +389,135 @@ class VivServer:
         self.chandict.pop(chan, None)
 
 # TODO: queue events to a list...  after a few ms (or CHUNKSIZE reached), convert to a Dict/List and send it?
+
+class VivChunkQueue(e_threads.ChunkQueue):
+    '''
+    Vivisect Event specific version of the ChunkQueue
+    This ChunkQueue implements ChunkQueue helpers specifically designed to
+    handle VivServer requirements, namely:
+    1) Chunking Around VWE_ADDMMAP events to reduce delays between request to
+        response
+    2) Front-loading chunking of the initial file VivServer download. Again,
+        this helps avoid timeouts while processing large workspaces.  With
+        the addition of multi-library VivWorkspaces, this can be a *real*
+        problem.  VivChunkQueue helps solve those problems
+    3) Introduction of the Event Group, enabling the functionality required
+        to do #2 efficiently.  Front-loading pre-analyzed groups of events
+        speeds up loading dramatically
+    '''
+    def _get_items(self):
+        '''
+        Already has self.lock when called.
+        '''
+        if not len(self.items):
+            return []
+
+        # watch for event groups
+        # "event groups" are a dict with a list stored at key 0.  this list is
+        # then able to be shoved over the Cobra channel immediately, front-loading
+        # any preparation, and drastically speeding up initial message glut on
+        # workspace loading.
+        if type(self.items[0]) == dict:
+            evtgroup = self.items.pop(0)
+            evts = evtgroup[0]
+            logger.debug("_get_items: STORED EVENT GROUP of size %d (queue remaining: %d)", len(evts), len(self.items))
+            return evts
+
+        # handle events in "chunks"
+        if self.chunksize:
+            logger.debug('_get_items(): chunksize: %d', self.chunksize)
+
+            # search for ADDMMAPs so we don't group two in one transmission
+            # RAM and CPU utilization make larger workspaces time out otherwise
+            # especially if there are multiple large memory maps (eg. multi-lib
+            # workspaces)
+            idx = None
+            for idx in range(self.chunksize-1):
+                # break if we reach the end of the event list
+                if idx >= len(self.items):
+                    break
+
+                evtitem = self.items[idx]
+
+                # search for Event Groups
+                if type(evtitem) == dict:
+                    # don't include this in the list!  kick out and let the
+                    # "event group" section (above) handle this one
+                    idx -= 1
+                    break
+
+                evtype, evtdata = evtitem
+                # search for ADDMMAP events
+                if evtype == vivisect.VWE_ADDMMAP:
+                    break
+
+
+            # idx+1 to grabs the last item identified (except for Event Groups)
+            ret = self.items[:idx+1]
+
+            numEaten = len(ret)
+            # just rebuild the list - tried several options, this still won out
+            self.items = self.items[numEaten:]
+
+            numLeft = len(self.items)
+            logger.debug('_get_items() - returning (%d eaten / %d left)', numEaten, numLeft)
+
+        else:
+            # if chunksize is 0 or None, go old-school and just shove it all in
+            ret = self.items
+            for idx, (evtype, evtdata) in enumerate(ret):
+                # still want to only send one memory map at a time
+                if evtype == vivisect.VWE_ADDMMAP:
+                    ret = self.items[:idx+1]
+                    break
+
+            self.items = self.items[len(ret):]
+            logger.debug("_get_items() - returning %d items (%d remaining)", len(ret), len(self.items))
+        return ret
+
+    @e_threads.firethread
+    def chunkedAddLargeEventList(self, evts):
+        '''
+        Break up a large list of events into appropriately pre-sized chunks,
+        allowing for high efficiency in serving them.  This is a @firethread
+        function, meaning that it runs in its own thread, making it "fire-and-
+        forget".
+        '''
+        evtcount = len(evts)
+        idx = 0
+        logger.debug("... adding %d events to the Queue", evtcount)
+        while evtcount > 0:
+            anchor = idx
+            for count in range(self.chunksize):
+                # pick and poke...
+                evt = evts[idx]
+                idx += 1
+                evtcount -= 1
+                if evtcount <10:
+                    logger.debug("...evtcount==%d, idx==%d", evtcount, idx)
+                if evtcount == 0:
+                    # we don't want to clip the last entry
+                    idx += 1
+                    break
+
+
+                # if it's a memory map, only include one per chunk
+                if evt[0] == vivisect.VWE_ADDMMAP:
+                    logger.debug(" (chopping after VWE_ADDMMAP)")
+                    break
+
+            # here is the list of events we're packaging up
+            worklist = evts[anchor:idx]
+
+            # we package the list in a dict, to differentiate between normal events and event groups
+            workdict = {0 : worklist}
+
+            # add this group to the Queue
+            logger.debug("... appending %d event chunk to the Queue (%d:%d)", len(worklist), anchor, idx)
+            self.append(workdict)
+
+
+>>>>>>> master
 
 class VivChunkQueue(e_threads.ChunkQueue):
     '''
@@ -525,7 +659,7 @@ def getServerWorkspace(server, wsname, block=True):
 
 def connectToServer(hostname, port=viv_port):
     builder = cobra.initSocketBuilder(hostname, port)
-    builder.setTimeout(timeo_sock)
+    builder.setTimeout(timeout_sock)
     server = cobra.CobraProxy("cobra://%s:%d/VivServer" % (hostname, port), msgpack=True)
     version = server.getServerVersion()
     if version != server_version:
@@ -536,7 +670,7 @@ def connectToServer(hostname, port=viv_port):
 def runMainServer(dirname='', port=viv_port):
     s = VivServer(dirname=dirname)
     daemon = cobra.CobraDaemon(port=port, msgpack=True)
-    daemon.recvtimeout = timeo_sock
+    daemon.recvtimeout = timeout_sock
     daemon.shareObject(s, 'VivServer')
     daemon.serve_forever()
 
