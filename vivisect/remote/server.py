@@ -517,8 +517,6 @@ class VivChunkQueue(e_threads.ChunkQueue):
             self.append(workdict)
 
 
->>>>>>> master
-
 class VivChunkQueue(e_threads.ChunkQueue):
     '''
     Vivisect Event specific version of the ChunkQueue
