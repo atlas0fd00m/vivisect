@@ -402,6 +402,8 @@ def analyzeFunction(vw, funcva):
                 lva, lsz, ltype, ltinfo = loctup
                 funcname = ltinfo
                 logger.debug('0x%x: LOC_IMPORT (emu-taint): 0x%x:  %r', opva, lva, funcname)
+                if not vw.getXrefsFrom(opva):
+                    vw.addXref(opva, lva, vivisect.REF_DATA)
 
             else:
                 # instead of a taint (which *should* indicate an IMPORT), we have real pointer.
