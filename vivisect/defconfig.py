@@ -69,6 +69,12 @@ defconfig = {
                 'offset': 0x1000,
                 'mask': 0xffffe000,
             },
+            'codeflow':{
+                'strict':False,
+                'onelib':True,
+                'onemap':False,
+                'stopOnExports':False,
+            }
         },
 
         'arch': {
@@ -162,6 +168,12 @@ docconfig = {
                 'offset':'Taint VA offset',
                 'mask':'Taint mask',
             },
+            'codeflow':{
+                'strict':"if 'onelib' is set, 'strict' breaks on code-flow into unnamed maps",
+                'onelib':"Stop code-flow if code calls to another library (multi-file workspaces)",
+                'onemap':"Stop code-flow if code calls to another memory-map (even within the same file)",
+                'stopOnExports':"Stop code-flow if we run into an Exported function",
+            }
         },
 
         'arch':{
