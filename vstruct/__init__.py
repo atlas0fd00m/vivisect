@@ -1,3 +1,4 @@
+import os
 import struct
 
 from copy import deepcopy
@@ -16,12 +17,46 @@ class MemObjFile:
     """
 
     def __init__(self, memobj, baseaddr):
+        self.basemaps = []
         self.baseaddr = baseaddr
         self.offset = baseaddr
         self.memobj = memobj
+        self._end = self._getEnd()
 
-    def seek(self, offset):
-        self.offset = self.baseaddr + offset
+    def _getEnd(self):
+        '''
+        Calculate the end of file (at initialization)
+        If the underlying memory map is named, find the highest map and use its
+        end as "the end".  
+        If the map has no name, use that one map as the end.
+
+        Stores all applicable memory maps in self.basemaps for easy access
+        '''
+        basemap = self.memobj.getMemoryMap(self.baseaddr)
+        mmapva, mmapsz, mmperm, mmname = basemap
+
+        if not mmname:  # unnamed map, stay local
+            self.basemaps = [basemap]
+            return mmapva + mmapsz
+
+        else:
+            self.basemaps = [mmap for mmap in self.memobj.getMemoryMaps() if mmap[3] == mmname]
+
+            eof = 0
+            for mmva, mmsz, mmperm, mmname in self.basemaps:
+                mmeof = mmva + mmsz
+                if mmeof > eof:
+                    eof = mmeof
+
+            return eof
+
+    def seek(self, offset, whence=0):
+        if whence == os.SEEK_SET:
+            self.offset = self.baseaddr + offset
+        elif whence == os.SEEK_CUR:
+            self.offset += offset
+        elif whence == os.SEEK_END:
+            self.offset = self._end + offset
 
     def flush(self):
         pass
@@ -31,30 +66,23 @@ class MemObjFile:
 
     def getSize(self):
         '''
-        To calculate the file size, we have to walk through memory maps, hoping they are in a row
+        To calculate the file size, we have to walk through memory maps, adding up their size.
         '''
-        offset = 0
-        mmva, size, _, origname = self.memobj.getMemoryMap(self.baseaddr)
-        logger.debug('fd.getSize() initial size: %s: %x:%x', origname, mmva, size)
-
-
-        while True:
-            tgtva = self.baseaddr + offset
-            mtup = self.memobj.getMemoryMap(tgtva)
-            if mtup is None:
-                logger.debug('Break at 0x%x (gap in maps)', tgtva)
-                break
-
-            mmva, msize, _, mname = self.memobj.getMemoryMap(self.baseaddr + offset)
-            if mname != origname:
-                logger.debug('Break at 0x%x (map name change: %s != %s)', tgtva, mname, origname)
-                break
-
-            size += msize
-            offset += msize
-            logger.info('fd.getSize() size: %s: %x:%x (%s)', origname, mmva, size, mname)
-
+        size = 0
+        for mmva, mmsz, _, origname in self.basemaps:
+            size += mmsz
         return size
+
+    def getMemSize(self):
+        '''
+        To calculate the file size, we have to walk through memory maps, adding up their size.
+        '''
+        top = 0
+        for mmva, mmsz, _, origname in self.basemaps:
+            temp = mmva + mmsz
+            if temp > top:
+                top = temp
+        return top - self.baseaddr
 
         
     def read(self, size=None):
@@ -63,40 +91,64 @@ class MemObjFile:
         If size is None, map calculation is done to attempt to determine where the end
         of the file is.  Attempting to model a traditional file.
         '''
-        osize = size
+        ret = []
         if size is None:
-            mtup = self.memobj.getMemoryMap(self.baseaddr + self.offset)
-            if mtup is None:
-                return b''
+            size = self.baseaddr + self.getSize() - self.offset
 
-            _, msize, _, origname = mtup
-            size = msize - self.offset
-            offset = 0
+        for midx, (mmva, mmsz, mmperm, mmname) in enumerate(self.basemaps):
+            if self.offset > mmva+mmsz:
+                continue
+            if self.offset < mmva:
+                continue
 
-            while True:
-                tgtva = self.baseaddr + offset + offset
-                mtup = self.memobj.getMemoryMap(tgtva)
-                if mtup is None:
-                    logger.debug('Break at 0x%x (gap in maps)', tgtva)
-                    break
+            offset = self.offset - mmva     # where are we in the map?
+            csize = min(size, mmsz-offset)
 
-                _, msize, _, mname = mtup
-                if mname != origname:
-                    logger.debug('Break at 0x%x (map name change: %s != %s)', tgtva, mname, origname)
-                    break
-                size += msize
-                offset += msize
+            #logger.warning("offset: %x   csize: %x   size: %x", offset, csize, size)
 
-        if osize is None:
-            logger.info("read() reading from 0x%x: 0x%x", self.baseaddr + self.offset, size)
+            # read and add the data to output
+            ret.append(self.memobj.readMemory(self.offset, csize))
+            self.offset += csize
+            size -= csize
 
-        ret = self.memobj.readMemory(self.offset, size)
-        self.offset += size
-        return ret
+            # if we're at the end of a memory map, and there's a gap between this and the next map
+            # make offset point at the next map
+            if midx < len(self.basemaps)-1:
+                self.offset = self.basemaps[midx+1][0]
+
+        return b''.join(ret)
 
     def write(self, bytes):
-        self.memobj.writeMemory(self.offset, bytes)
-        self.offset += len(bytes)
+        '''
+        Write data to the file
+        Currently fails with SegV if permissions don't allow writing
+        '''
+        for midx, (mmva, mmsz, mmperm, mmname) in enumerate(self.basemaps):
+            if self.offset > mmva+mmsz:
+                continue
+            if self.offset < mmva:
+                continue
+
+            offset = self.offset - mmva     # where are we in the map?
+            csize = min(len(bytes), mmsz-offset)
+
+            #logger.warning("offset: %x   csize: %x   size: %x", offset, csize, len(bytes))
+
+            # read and add the data to output
+            ### this next bit only works with VivWorkspace, not VSnapshot or Vtrace
+            if hasattr(self.memobj, "getAdminRights"):
+                with self.memobj.getAdminRights():
+                    self.memobj.writeMemory(self.offset, bytes[:csize])
+            else:
+                self.memobj.writeMemory(self.offset, bytes[:csize])
+            self.offset += csize
+            bytes = bytes[csize:]
+
+            # if we're at the end of a memory map, and there's a gap between this and the next map
+            # make offset point at the next map
+            if midx < len(self.basemaps)-1:
+                self.offset = self.basemaps[midx+1][0]
+
 
 def isVstructType(x):
     return isinstance(x, vs_prims.v_base)
@@ -562,7 +614,6 @@ class VArray(VStruct):
     def __setitem__(self, index, valu):
         return self.vsSetField("%d" % index, valu)
 
-    #FIXME slice asignment
 
 class VUnion(VStruct):
 
