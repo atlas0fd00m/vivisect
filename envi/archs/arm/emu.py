@@ -1489,12 +1489,11 @@ class ArmEmulator(ArmRegisterContext, envi.Emulator):
         self.setFlag(PSR_N_bit, e_bits.is_signed(ures, dsize))
         self.setFlag(PSR_Z_bit, not ures)
         oper = op.opers[1]
-        if isinstance(oper, ArmRegShiftImmOper):
-            if oper.shimm == 0:
-                return
-            logger.critical('FIXME: TEQ - do different shift types for Carry flag')
+
+        if isinstance(oper, ArmImmOper):
             # FIXME: make the operands handle a ThumbExpandImm_C (for immediate) or Shift_C (for RegShiftImm), etc...
-            self.setFlag(PSR_C_bit, e_bits.is_unsigned_carry(ures, dsize))
+            val, carry = oper.expandImm(self)
+            self.setFlag(PSR_C_bit, carry)
        
     def i_rsb(self, op):
         src1 = self.getOperValue(op, 1)

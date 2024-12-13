@@ -2048,7 +2048,7 @@ class ArmInstructionSet(unittest.TestCase):
 
                         # do the mnemonic comparison
                         if redoprepr != redgoodop:
-                            log.warning("viv: %r != test: %r", redoprepr, redgoodop)
+                            logger.warning("viv: %r != test: %r", redoprepr, redgoodop)
                             if len(bytez) == 4:
                                 num, = struct.unpack("<H", unhexlify(bytez))
                             else:

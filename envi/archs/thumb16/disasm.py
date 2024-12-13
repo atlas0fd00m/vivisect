@@ -1,4 +1,5 @@
-from envi.archs.arm.disasm import _do_adv_simd_32, _do_fp_dp, _do_adv_simd_ldst_32
+from envi.archs.arm.disasm import _do_adv_simd_32, _do_fp_dp, _do_adv_simd_ldst_32, ThumbExpandImm_C
+
 import envi.bits as e_bits
 import envi.bintree as e_btree
 
@@ -706,30 +707,6 @@ class ThumbITOper(ArmOperand):
         return None
 
 
-def ROR_C(imm, bitcount, shift):
-    m = shift % bitcount
-    result = (imm >> m) | (imm << (bitcount-m))
-    carry = result >> (bitcount-1)
-    return result, carry
-
-
-def ThumbExpandImm_C(imm4, imm8, carry):
-    if imm4 & 0xc == 0:
-        ducky = imm4 & 3
-        if ducky == 0:
-            return imm8, carry
-        if ducky == 1:
-            return (imm8 << 16) | imm8, carry
-        if ducky == 2:
-            return (imm8 << 24) | (imm8 << 8), carry
-        if ducky == 3:
-            return imm8 | (imm8 << 8) | (imm8 << 16) | (imm8 << 24), carry
-    else:
-        a = imm8 >> 7
-        imm8 |= 0x80  # 1bcdefg
-        off = (a | (imm4 << 1))
-        return ROR_C(imm8, 32, off)
-
 
 dp_secondary = (
     'tst',  # and
@@ -774,10 +751,16 @@ def dp_mod_imm_32(va, val1, val2):
 
     dpop = (val1 >> 5) & 0xf
 
-    const, carry = ThumbExpandImm_C(imm4, const, 0)
+    if imm4 & 0b1100:
+        # straight ROR
+        oper2 = ArmImmOper(const | 0x80, imm4)
+
+    else:
+        const, carry = ThumbExpandImm_C(imm4, const, 0)
+        oper2 = ArmImmOper(const, imm4, expand=EXP_T32C)
+
 
     if Rd == 15 and S:
-        #raise Exception("dp_mod_imm_32 - FIXME: secondary dp encoding")
         mnem = dp_secondary[dpop]
         if mnem is None:
             raise Exception("dp_mod_imm_32: Rd==15, S, but dpop doesn't have a secondary! va:%x, %x%x" % (va, val1, val2))
@@ -785,17 +768,17 @@ def dp_mod_imm_32(va, val1, val2):
         if S:
             flags |= DP_SEC_PSR_S[dpop]
         oper1 = ArmRegOper(Rn)
-        oper2 = ArmImmOper(const)
         opers = (oper1, oper2)
         return COND_AL, None, mnem, opers, flags, 0
 
     elif Rn == 15 and (val1 & 0xfbc0 == 0xf040):
-        dpop = (val1 >> 5) & 0xf
         mnem = dp_secondary[dpop]
+        if mnem is None:
+            raise Exception("dp_mod_imm_32: Rd==15, val&fbc0==f040, but dpop doesn't have a secondary! va:%x, %x%x" % (va, val1, val2))
+
         if S:
             flags |= DP_SEC_PSR_S[dpop]
         oper1 = ArmRegOper(Rd)
-        oper2 = ArmImmOper(const)
         opers = (oper1, oper2)
         return COND_AL, None, mnem, opers, flags, 0
 
@@ -804,7 +787,6 @@ def dp_mod_imm_32(va, val1, val2):
 
     oper0 = ArmRegOper(Rd)
     oper1 = ArmRegOper(Rn)
-    oper2 = ArmImmOper(const)
     opers = (oper0, oper1, oper2)
     return COND_AL, None, None, opers, flags, 0
 

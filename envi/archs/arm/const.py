@@ -773,3 +773,7 @@ for ins_index, instr in enumerate(instrnames):
     globals()['INS_' + instr] = ins_index
 
 no_update_Rd = (INS_TST, INS_TEQ, INS_CMP, INS_CMN, )
+
+
+EXP_T32C = 1
+EXP_A32C = 2

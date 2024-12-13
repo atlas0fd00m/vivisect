@@ -128,6 +128,30 @@ shifters = (
 )
 
 
+def ROR_C(imm, bitcount, shift):
+    m = shift % bitcount
+    result = (imm >> m) | (imm << (bitcount-m))
+    carry = result >> (bitcount-1)
+    return result, carry
+
+
+def ThumbExpandImm_C(imm4, imm8, carry):
+    if imm4 & 0xc == 0:
+        ducky = imm4 & 3
+        if ducky == 0:
+            return imm8, carry
+        if ducky == 1:
+            return (imm8 << 16) | imm8, carry
+        if ducky == 2:
+            return (imm8 << 24) | (imm8 << 8), carry
+        if ducky == 3:
+            return imm8 | (imm8 << 8) | (imm8 << 16) | (imm8 << 24), carry
+    else:
+        a = imm8 >> 7
+        imm8 |= 0x80  # 1bcdefg
+        off = (a | (imm4 << 1))
+        return ROR_C(imm8, 32, off)
+
 ####################################################################
 # Mnemonic tables for opcode based mnemonic lookup
 
@@ -4711,10 +4735,11 @@ class ArmImmOper(ArmOperand):
     ''' register operand.  see "addressing mode 1 - data processing operands - immediate" '''
 
 
-    def __init__(self, val, shval=0, shtype=S_ROR, va=0, size=4):
+    def __init__(self, val, shval=0, shtype=S_ROR, va=0, size=4, expand=None):
         self.val = val
         self.shval = shval
         self.shtype = shtype
+        self.expand = expand
         self.size = size
 
     def __eq__(self, oper):
@@ -4739,7 +4764,28 @@ class ArmImmOper(ArmOperand):
         return True
 
     def getOperValue(self, op, emu=None, codeflow=False):
-        return shifters[self.shtype](self.val, self.shval, self.size, emu=emu)
+        if not self.expand:
+            return shifters[self.shtype](self.val, self.shval, self.size, emu=emu)
+
+        value, carry = self.expandImm(emu=emu)
+        return value
+
+    def expandImm(self, emu=None):
+        if self.expand == EXP_T32C:
+            if emu:
+                carry = emu.getFlag(PSR_C_bit)
+            else:
+                carry = 0
+            return ThumbExpandImm_C(self.shval, self.val, carry)
+
+        if self.expand in (None, EXP_A32C):
+            if emu:
+                carry = emu.getFlag(PSR_C_bit)
+            else:
+                carry = 0
+            return (shifters[self.shtype](self.val, self.shval, self.size, emu=emu), carry)
+        logger.critical("WTFO? self.expand == %r", self.expand) 
+
 
     def render(self, mcanv, op, idx):
         value = self.val
