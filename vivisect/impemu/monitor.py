@@ -96,10 +96,17 @@ class AnalysisMonitor(EmulationMonitor):
             else:
                 self.checkAddDataXref(vw, va, val, discrete, tsize)
 
+        imports = self.vw.getImports()
         for va, callname, argv in self.callcomments:
             reprargs = [emu.reprVivValue(val) for val in argv]
             self.vw.setComment(va, '%s(%s)' % (callname, ','.join(reprargs)))
             cva = self.vw.vaByName(callname)
+            if not cva:
+                # Look for imports that match the call name.
+                for import_va, _, _, import_name in imports:
+                    if import_name == callname:
+                        cva = import_va
+                        break
             if cva:
                 self.vw.addXref(va, cva, REF_CODE, envi.BR_PROC)
 

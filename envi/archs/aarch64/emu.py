@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 # 
 # instruction code
 # exception handler code
-# FIXME: SPSR handling is not certain.  
 
 # calling conventions
 
@@ -70,6 +69,8 @@ def _getRegIdx(idx, mode):
     #ridx = reg_table[ridx]  # magic pointers allowing overlapping banks of registers
     return ridx
 
+
+# Conditional handlers based in bitfield.  Used for handling bitfields in an array
 def c0000(flags):
     return flags & 4
 
@@ -160,10 +161,7 @@ class A64Emulator(A64Module, A64RegisterContext, envi.Emulator):
             flags &= ~which
         self.setCPSR(flags)
 
-    def getFlag(self, which):          # FIXME: CPSR?
-        #if (flags_reg == None):
-        #    flags_reg = proc_modes[self.getProcMode()][5]
-        #flags = self.getRegister(flags_reg)
+    def getFlag(self, which):
         flags = self.getCPSR()
         if flags == None:
             raise envi.PDEUndefinedFlag(self)
@@ -173,8 +171,6 @@ class A64Emulator(A64Module, A64RegisterContext, envi.Emulator):
         bytes = self.readMemory(addr, size)
         if bytes == None:
             return None
-        #FIXME change this (and all uses of it) to passing in format...
-        #FIXME: Remove byte check and possibly half-word check.  (possibly all but word?)
         if len(bytes) != size:
             raise Exception("Read Gave Wrong Length At 0x%.8x (va: 0x%.8x wanted %d got %d)" % (self.getProgramCounter(),addr, size, len(bytes)))
         if size == 1:
@@ -187,8 +183,6 @@ class A64Emulator(A64Module, A64RegisterContext, envi.Emulator):
             return struct.unpack(b"<Q", bytes)[0]
 
     def writeMemValue(self, addr, value, size):
-        #FIXME change this (and all uses of it) to passing in format...
-        #FIXME: Remove byte check and possibly half-word check.  (possibly all but word?)
         if size == 1:
             bytes = struct.pack(b"B",value & 0xff)
         elif size == 2:
@@ -200,7 +194,6 @@ class A64Emulator(A64Module, A64RegisterContext, envi.Emulator):
         self.writeMemory(addr, bytes)
 
     def readMemSignedValue(self, addr, size):
-        #FIXME: Remove byte check and possibly half-word check.  (possibly all but word?)
         bytes = self.readMemory(addr, size)
         if bytes == None:
             return None
@@ -227,15 +220,15 @@ class A64Emulator(A64Module, A64RegisterContext, envi.Emulator):
         self.setProgramCounter(x)
 
     def doPush(self, val):
-        esp = self.getRegister(REG_ESP)
-        esp -= 4
-        self.writeMemValue(esp, val, 4)
-        self.setRegister(REG_ESP, esp)
+        sp = self.getRegister(REG_SP)
+        sp -= 8
+        self.writeMemValue(sp, val, 8)
+        self.setRegister(REG_SP, sp)
 
     def doPop(self):
-        esp = self.getRegister(REG_ESP)
-        val = self.readMemValue(esp, 4)
-        self.setRegister(REG_ESP, esp+4)
+        sp = self.getRegister(REG_SP)
+        val = self.readMemValue(sp, 8)
+        self.setRegister(REG_SP, sp+8)
         return val
 
     def getProcMode(self):
@@ -321,7 +314,7 @@ class A64Emulator(A64Module, A64RegisterContext, envi.Emulator):
         ridx = _getRegIdx(idx, mode)
 
         if idx == index:    # not a metaregister
-            self._rctx_vals[ridx] = (value & self._rctx_masks[ridx])      # FIXME: hack.  should look up index in proc_modes dict?
+            self._rctx_vals[ridx] = (value & self._rctx_masks[ridx])
             return
 
         # If we get here, it's a meta register index.
@@ -329,8 +322,7 @@ class A64Emulator(A64Module, A64RegisterContext, envi.Emulator):
         offset = (index >> 24) & 0xff
         width  = (index >> 16) & 0xff
 
-        #FIXME is it faster to generate or look thses up?
-        mask = (2**width)-1
+        mask = e_bits.b_masks[width]
         mask = mask << offset
 
         # NOTE: basewidth is in *bits*
@@ -351,7 +343,6 @@ class A64Emulator(A64Module, A64RegisterContext, envi.Emulator):
         (allows cmp and sub to use the same code)
         """
         # Src op gets sign extended to dst
-        #FIXME account for same operand with zero result for PDE
         src1 = self.getOperValue(op, 1)
         src2 = self.getOperValue(op, 2)
         Sflag = op.iflags & IF_PSR_S
@@ -472,7 +463,6 @@ class A64Emulator(A64Module, A64RegisterContext, envi.Emulator):
         src1 = self.getOperValue(op, 1)
         src2 = self.getOperValue(op, 2)
         
-        #FIXME PDE and flags
         if src1 == None or src2 == None:
             self.undefFlags()
             self.setOperValue(op, 0, None)
@@ -526,13 +516,11 @@ class A64Emulator(A64Module, A64RegisterContext, envi.Emulator):
         self.setFlag(PSR_N_bit, e_bits.is_signed(ures, dsize))
         self.setFlag(PSR_Z_bit, (0,1)[ures==0])
         self.setFlag(PSR_C_bit, e_bits.is_unsigned_carry(ures, dsize))
-        #self.setFlag(PSR_V_bit, e_bits.is_signed_overflow(sres, dsize))
         
     def i_rsb(self, op):
         src1 = self.getOperValue(op, 1)
         src2 = self.getOperValue(op, 2)
         
-        #FIXME PDE and flags
         if src1 == None or src2 == None:
             self.undefFlags()
             self.setOperValue(op, 0, None)
@@ -567,7 +555,6 @@ class A64Emulator(A64Module, A64RegisterContext, envi.Emulator):
 
     def i_rsb(self, op):
         # Src op gets sign extended to dst
-        #FIXME account for same operand with zero result for PDE
         src1 = self.getOperValue(op, 1)
         src2 = self.getOperValue(op, 2)
         Sflag = op.iflags & IF_PSR_S
@@ -581,7 +568,6 @@ class A64Emulator(A64Module, A64RegisterContext, envi.Emulator):
 
     def i_sub(self, op):
         # Src op gets sign extended to dst
-        #FIXME account for same operand with zero result for PDE
         src1 = self.getOperValue(op, 1)
         src2 = self.getOperValue(op, 2)
         Sflag = op.iflags & IF_PSR_S
@@ -599,7 +585,6 @@ class A64Emulator(A64Module, A64RegisterContext, envi.Emulator):
         src1 = self.getOperValue(op, 1)
         src2 = self.getOperValue(op, 2)
         
-        #FIXME PDE and flags
         if src1 == None or src2 == None:
             self.undefFlags()
             self.setOperValue(op, 0, None)
@@ -671,138 +656,4 @@ class A64Emulator(A64Module, A64RegisterContext, envi.Emulator):
         coproc = self._getCoProc(cpnum)
         coproc.mcrr(op.opers)
 
-
-
-
-opcode_dist = \
-[('and', 4083),#
- ('stm', 1120),#
- ('ldr', 1064),#
- ('add', 917),#
- ('stc', 859),#
- ('str', 770),#
- ('bl', 725),#
- ('ldm', 641),#
- ('b', 472),#
- ('ldc', 469),#
- ('tst', 419),#
- ('rsb', 196),#
- ('eor', 180),#
- ('mul', 159),
- ('swi', 128),
- ('sub', 110),#
- ('adc', 96),
- ('cdp', 74),#
- ('orr', 66),
- ('cmn', 59),
- ('mcr', 55),#
- ('stc2', 54),
- ('ldc2', 52),
- ('mrc', 49),#
- ('mvn', 47),
- ('rsc', 46),
- ('teq', 45),
- ('cmp', 41),
- ('sbc', 40),
- ('mov', 35),#
- ('bic', 34),
- ('mcr2', 29),#
- ('mrc2', 28),#
- ('swp', 28),
- ('mcrr', 21),#
- ('mrrc', 20),#
- ('usada8', 20),
- ('qadd', 13),
- ('mrrc2', 10),#
- ('add16', 9),
- ('mla', 9),
- ('mcrr2', 7),#
- ('uqsub16', 6),
- ('uqadd16', 5),
- ('sub16', 5),
- ('umull', 4),
- ('uq', 3),
- ('smlsdx', 3),
- ('uhsub16', 3),
- ('uqsubaddx', 3),
- ('qdsub', 2),
- ('subaddx', 2),
- ('uqadd8', 2),
- ('ssat', 2),
- ('uqaddsubx', 2),
- ('smull', 2),
- ('blx', 2),
- ('smlal', 2),
- ('shsub16', 1),
- ('', 1),
- ('smlsd', 1),
- ('pkhbt', 1),
- ('revsh', 1),
- ('qadd16', 1),
- ('uqsub8', 1),
- ('ssub16', 1),
- ('usad8', 1),
- ('uadd16', 1),
- ('smladx', 1),
- ('swpb', 1),
- ('smlaldx', 1),
- ('usat', 1),
- ('umlal', 1),
- ('rev16', 1),
- ('sadd16', 1),
- ('sel', 1),
- ('sub8', 1),
- ('pkhtb', 1),
- ('umaal', 1),
- ('addsubx', 1),
- ('add8', 1),
- ('smlad', 1),
- ('sxtb', 1),
- ('sadd8', 1)]
-
-
-'''
-A2.3.1 Writing to the PC
-    In ARMv7, many data-processing instructions can write to the PC. Writes to the PC are handled as follows:
-        * In Thumb state, the following 16-bit Thumb instruction encodings branch to the value written to the PC:
-            - encoding T2 of ADD (register, Thumb) on page A8-308
-            - encoding T1 of MOV (register, Thumb) on page A8-484.
-            The value written to the PC is forced to be halfword-aligned by ignoring its least significant bit, treating that
-            bit as being 0.
-        * The B, BL, CBNZ, CBZ, CHKA, HB, HBL, HBLP, HBP, TBB, and TBH instructions remain in the same instruction set state
-            and branch to the value written to the PC.
-            The definition of each of these instructions ensures that the value written to the PC is correctly aligned for
-            the current instruction set state.
-        * The BLX (immediate) instruction switches between ARM and Thumb states and branches to the value written
-            to the PC. Its definition ensures that the value written to the PC is correctly aligned for the new instruction
-            set state.
-        * The following instructions write a value to the PC, treating that value as an interworking address to branch
-            to, with low-order bits that determine the new instruction set state:
-                - BLX (register), BX, and BXJ
-                - LDR instructions with <Rt> equal to the PC
-                - POP and all forms of LDM except LDM (exception return), when the register list includes the PC
-                - in ARM state only, ADC, ADD, ADR, AND, ASR (immediate), BIC, EOR, LSL (immediate), LSR (immediate), MOV,
-                    MVN, ORR, ROR (immediate), RRX, RSB, RSC, SBC, and SUB instructions with <Rd> equal to the PC and without
-                    flag-setting specified.
-            For details of how an interworking address specifies the new instruction set state and instruction address, see
-            Pseudocode details of operations on ARM core registers on page A2-47.
-            Note
-                - The register-shifted register instructions, that are available only in the ARM instruction set and are
-                    summarized inData-processing (register-shifted register) on page A5-196, cannot write to the PC.
-                - The LDR, POP, and LDM instructions first have interworking branch behavior in ARMv5T.
-                - The instructions listed as having interworking branch behavior in ARM state only first have this
-                    behavior in ARMv7.
-                In the cases where later versions of the architecture introduce interworking branch behavior, the behavior in
-                earlier architecture versions is a branch that remains in the same instruction set state. For more information,
-                see:
-                    - Interworking on page AppxL-2453, for ARMv6
-                    - Interworking on page AppxO-2539, for ARMv5 and ARMv4.
-        * Some instructions are treated as exception return instructions, and write both the PC and the CPSR. For more
-            information, including which instructions are exception return instructions, see Exception return on
-            page B1-1191.
-        * Some instructions cause an exception, and the exception handler address is written to the PC as part of the
-            exception entry. Similarly, in ThumbEE state, an instruction that fails its null check causes the address of the
-            null check handler to be written to the PC, see Null checking on page A9-1111.
-
-'''
 

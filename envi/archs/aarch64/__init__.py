@@ -1,9 +1,10 @@
 
 """
-The initial aarch64 module.
+AArch64 Architecture Module Initialization
 """
 
 import envi
+import struct
 
 from envi.archs.aarch64.regs import *
 from envi.archs.aarch64.disasm import *
@@ -20,12 +21,11 @@ class A64Module(envi.ArchitectureModule):
     def archGetRegCtx(self):
         return A64RegisterContext()
 
-    def archGetBreakInstr(self):
-        raise Exception ("weird... what are you trying to do here?  ARM has a complex breakpoint instruction")
-        return
+    def archGetBreakInstr(self, imm16=0):
+        return struct.pack(b'<I', 0xd4200000 | (imm16<<5))
 
     def archGetNopInstr(self):
-        return '\x00'
+        return b'\x1f\x20\x03\xd5'  # LSB
  
     def getPointerSize(self):
         return 8
@@ -46,17 +46,10 @@ class A64Module(envi.ArchitectureModule):
         self._endian = endian
         self._arch_dis.setEndian(endian)
 
-    def archModifyFuncAddr(self, va, info):
-        return va, {}
-
-    def archModifyXrefAddr(self, tova, reftype, rflags):
-        return tova, reftype, rflags
-
     def initRegGroups(self):
         envi.ArchitectureModule.initRegGroups(self)
         self._regGrps.update({'general': aarch64_regs})
 
 
-
-
-#from envi.archs.aarch64.emu import *
+# Initialize system register lookup tables when module loads
+initialize_sysreg_support()

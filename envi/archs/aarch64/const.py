@@ -102,7 +102,7 @@ EXT_LSL     = 8
 ENDIAN_LSB = 0
 ENDIAN_MSB = 1
 
-iencs = (\
+iencs = (
     'IENC_DATA_SIMD',
     'IENC_LS_EXCL',
     'IENC_LS_NAPAIR_OFFSET',
@@ -289,8 +289,8 @@ iencs = (\
 
 IENC_MAX = len(iencs)
 
-for ieidx in range(IENC_MAX):
-    globals()[iencs[ieidx]] = ieidx
+for ieidx, enc in enumerate(iencs):
+    globals()[enc] = ieidx
 
 instrnames = [
     'ADR',
@@ -1248,7 +1248,7 @@ cond_table = (
     'GT',
     'LE',
     'AL',
-    'NV^b', #FIXME
+    'NV',
 )
 
 COND_EQ = 0
