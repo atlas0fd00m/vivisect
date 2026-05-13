@@ -131,18 +131,26 @@ def getMemoryMapInfo(elf, fname=None, baseaddr=None):
 def makeStringTable(vw, va, maxva):
 
     while va < maxva:
-        if vw.readMemory(va, 1) == "\x00":
+        try:
+            first = vw.readMemory(va, 1)
+        except e_exc.SegmentationViolation as e:
+            logger.warning("makeStringTable\t%r", e)
+            return
+
+        if first == "\x00":
             va += 1
             continue
-        else:
-            try:
-                if vw.isLocation(va):
-                    return
-                l = vw.makeString(va)
-                va += l[vivisect.L_SIZE]
-            except Exception as e:
-                logger.warning("makeStringTable\t%r", e)
+
+        try:
+            if vw.isLocation(va):
                 return
+
+            l = vw.makeString(va)
+            va += l[vivisect.L_SIZE]
+
+        except Exception as e:
+            logger.warning("makeStringTable\t%r", e)
+            return
 
 def makeSymbolTable(vw, va, maxva):
     ret = []
