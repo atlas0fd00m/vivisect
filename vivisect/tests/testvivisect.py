@@ -28,6 +28,26 @@ def isint(x):
     return type(x) is int
 
 
+def iter_bad_function_graph_edges(graph):
+    for edge in graph.getEdges():
+        eid, n1, n2, eprops = edge
+        va1 = eprops.get('va1')
+        va2 = eprops.get('va2')
+        if va1 is None or va2 is None:
+            continue
+
+        src = graph.getNode(n1)
+        dst = graph.getNode(n2)
+        if src is None or dst is None:
+            yield edge, None, None
+            continue
+
+        src_valist = src[1].get('valist', ())
+        dst_valist = dst[1].get('valist', ())
+        if va1 not in src_valist or va2 not in dst_valist:
+            yield edge, src_valist, dst_valist
+
+
 class VivisectTest(v_t_utils.VivTest):
     @classmethod
     def setUpClass(cls):
@@ -1433,6 +1453,19 @@ class VivisectTest(v_t_utils.VivTest):
                 cb = vw.getCodeBlock(nid)
                 self.assertEqual(nid, cb[0])
                 self.assertEqual(fva, cb[2])
+
+    def test_function_graph_edge_metadata_matches_edge_endpoints(self):
+        cases = [
+            (self.firefox_vw, 0x140048200),
+            (self.vdir_vw, 0x08058960),
+            (self.chown_vw, 0x020028b0),
+        ]
+
+        for vw, fva in cases:
+            with self.subTest(fva=hex(fva)):
+                graph = vw.getFunctionGraph(fva)
+                bad_edges = list(iter_bad_function_graph_edges(graph))
+                self.assertEqual([], bad_edges)
 
     def test_firefox_segments(self):
         vw = self.firefox_vw

@@ -69,6 +69,7 @@ class CodeBlockGraph(v_graphcore.HierGraph):
                 if self._addCodeBranch(node, va, tova, bflags):
                     todo.append(tova)
 
+        self._normalizeCodeBlockEdges()
         return enode
 
     def _getCodeBranches(self, va):
@@ -186,6 +187,37 @@ class CodeBlockGraph(v_graphcore.HierGraph):
         #self.setNodeProp(node2,'weight',max(w2,w1+1))
 
         return node2
+
+    def _normalizeCodeBlockEdges(self):
+        # Splitting a code block can leave stale edge endpoints behind when
+        # the codeflow metadata still points at instructions now owned by a
+        # different node.  Re-anchor those edges to the nodes that actually
+        # contain va1/va2 before returning the finished graph.
+        for edge in list(self.getEdgesByProp('codeflow')):
+            codeflow = edge[3].get('codeflow')
+            if codeflow is None:
+                continue
+
+            va1, va2 = codeflow
+            srcnode = self.getNodeByVa(va1)
+            dstnode = self.getNodeByVa(va2)
+            if srcnode is None or dstnode is None:
+                continue
+
+            if edge[1] == srcnode[0] and edge[2] == dstnode[0]:
+                continue
+
+            duplicates = [
+                dup for dup in self.getEdgesByProp('codeflow', codeflow)
+                if dup is not edge and dup[1] == srcnode[0] and dup[2] == dstnode[0]
+            ]
+            if duplicates:
+                self.delEdge(edge)
+                continue
+
+            eprops = dict(edge[3])
+            self.delEdge(edge)
+            self.addEdge(srcnode, dstnode, eprops=eprops)
 
     def addVaToNode(self, node, va):
         self.nodevas[va] = node
