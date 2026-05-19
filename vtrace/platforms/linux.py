@@ -532,11 +532,18 @@ class LinuxMixin(v_posix.PtraceMixin, v_posix.PosixMixin):
             raise vtrace.PlatformException('ERROR: Invalid threadid chosen: %d' % tid)
 
     def _attachThreadFromEvent(self, tid):
-        if tid <= 0:
-            logger.warning('Ignoring invalid thread event tid: %d', tid)
+        if tid is None or tid <= 0:
+            logger.warning('Ignoring invalid thread event tid: %r', tid)
             return
 
         self.attachThread(tid, attached=True)
+
+    def _getStoppedThreadFallback(self):
+        for tid in self._stopped_cache:
+            if tid > 0 and tid not in self.pthreads:
+                return tid
+
+        return None
 
     @v_base.threadwrap
     def setupPtraceOptions(self, tid):
@@ -633,6 +640,8 @@ class LinuxMixin(v_posix.PtraceMixin, v_posix.PosixMixin):
 
                 elif self._stopped_hack:
                     newtid = self.getPtraceEvent(tid)
+                    if newtid <= 0:
+                        newtid = self._getStoppedThreadFallback()
                     #print("WHY DID WE GET *ANOTHER* STOP?: %d" % tid)
                     #print('PTRACE EVENT: %d' % newtid)
                     self._attachThreadFromEvent(newtid)
