@@ -44,8 +44,10 @@ class LinuxThreadEventRegressionTest(unittest.TestCase):
             self.pid = 31337
             self.execing = False
             self._stopped_hack = True
+            self._stopped_cache = {}
             self.event_tid = event_tid
             self.attach_calls = []
+            self.pthreads = [self.pid]
 
         def getPtraceEvent(self, tid=None):
             return self.event_tid
@@ -55,6 +57,9 @@ class LinuxThreadEventRegressionTest(unittest.TestCase):
 
         def _attachThreadFromEvent(self, tid):
             return v_linux.LinuxMixin._attachThreadFromEvent(self, tid)
+
+        def _getStoppedThreadFallback(self):
+            return v_linux.LinuxMixin._getStoppedThreadFallback(self)
 
         def runAgain(self):
             pass
@@ -69,6 +74,15 @@ class LinuxThreadEventRegressionTest(unittest.TestCase):
         v_linux.LinuxMixin.platformProcessEvent(trace, (trace.pid, status))
 
         self.assertEqual(trace.attach_calls, [])
+
+    def test_stopped_hack_falls_back_to_cached_thread_id(self):
+        trace = self.FakeTrace(event_tid=0)
+        trace._stopped_cache[4242] = True
+        status = (signal.SIGSTOP << 8) | 0x7f
+
+        v_linux.LinuxMixin.platformProcessEvent(trace, (trace.pid, status))
+
+        self.assertEqual(trace.attach_calls, [(4242, True)])
 
     def test_stopped_hack_attaches_valid_thread_id(self):
         trace = self.FakeTrace(event_tid=4242)
