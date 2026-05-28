@@ -3,7 +3,7 @@ import logging
 import platform
 import unittest
 
-import envi
+import envi.exc as e_exc
 import vivisect
 import Elf
 import vivisect.cli as viv_cli
