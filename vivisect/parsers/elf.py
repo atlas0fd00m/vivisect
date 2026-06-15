@@ -133,7 +133,7 @@ def makeStringTable(vw, va, maxva):
         try:
             first = vw.readMemory(va, 1)
         except e_exc.SegmentationViolation as e:
-            logger.warning("makeStringTable\t%r", e)
+            logger.warning("makeStringTable(first byte@0x%x)\t%r", va, e)
             return
 
         if first == "\x00":
