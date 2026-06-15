@@ -151,7 +151,7 @@ def makeStringTable(vw, va, maxva):
                 return
 
             l = vw.makeString(va)
-            va += l[vivisect.L_SIZE]
+            va += l[v_const.L_SIZE]
 
         except Exception as e:
             logger.warning("makeStringTable\t%r", e)
