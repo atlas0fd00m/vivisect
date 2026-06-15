@@ -48,7 +48,7 @@ class MockStringTableWorkspace:
 
     def makeString(self, va):
         self.string_calls.append(va)
-        return (va, 4, vivisect.LOC_STRING, None)
+        return (va, 4, v_const.LOC_STRING, None)
 
 
 class ELFStringTableRegressionTests(unittest.TestCase):
