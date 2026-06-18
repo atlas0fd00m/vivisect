@@ -1,16 +1,157 @@
 import vqt.tree as vq_tree
+import vqt.basics as vq_basics
 import vivisect.base as viv_base
 import envi.qt.memory as e_q_memory
 import vivisect.qt.ctxmenu as v_q_ctxmenu
 
-from PyQt6.QtWidgets import QMenu
+from PyQt6.QtCore import QSortFilterProxyModel, QRegularExpression
+from PyQt6.QtGui import QActionGroup
+from PyQt6.QtWidgets import QMenu, QWidget, QLineEdit, QToolButton, QWidgetAction
 
-from vqt.main import *
+from vqt.main import vqtevent
 from vqt.common import *
 from vivisect.const import *
 
 class VivNavModel(e_q_memory.EnviNavModel):
     pass
+
+
+class VivFilterModel(QSortFilterProxyModel):
+    """
+    A QSortFilterProxyModel configured for real-time full-column filtering
+    with transparent attribute delegation to the source model.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+        self.setDynamicSortFilter(True)
+        self.setFilterKeyColumn(-1)  # filter across all columns
+
+    def __getattr__(self, name):
+        # Delegate attribute lookups to the source model so
+        # vivAddRow / append / vqDelRow etc. pass through transparently.
+        return getattr(self.sourceModel(), name)
+
+
+class VQFilterWidget(QLineEdit):
+    """Line-edit filter bar with case-sensitivity toggle and pattern-type selection."""
+
+    filterChanged = QtCore.pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+        self.setClearButtonEnabled(True)
+        self.setPlaceholderText("Filter...")
+
+        self._caseSensitive = False
+        self._patternType = "fixed"
+
+        # ---- options menu ----
+        menu = QMenu(self)
+
+        caseAction = menu.addAction("Case Sensitive")
+        caseAction.setCheckable(True)
+        caseAction.toggled.connect(self._onCaseToggled)
+
+        menu.addSeparator()
+
+        patternGroup = QActionGroup(self)
+        patternGroup.setExclusive(True)
+
+        for label, ptype in [
+            ("Fixed String", "fixed"),
+            ("Regular Expression", "regex"),
+            ("Wildcard", "wildcard"),
+        ]:
+            action = menu.addAction(label)
+            action.setData(ptype)
+            action.setCheckable(True)
+            if ptype == "fixed":
+                action.setChecked(True)
+            patternGroup.addAction(action)
+
+        patternGroup.triggered.connect(self._onPatternChanged)
+
+        # ---- options button (hamburger style) ----
+        optionsBtn = QToolButton(self)
+        optionsBtn.setCursor(QtCore.Qt.CursorShape.ArrowCursor)
+        optionsBtn.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
+        optionsBtn.setStyleSheet("QToolButton { border: none; }")
+        optionsBtn.setArrowType(QtCore.Qt.ArrowType.DownArrow)
+        optionsBtn.setMenu(menu)
+        optionsBtn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+
+        optionsAction = QWidgetAction(self)
+        optionsAction.setDefaultWidget(optionsBtn)
+        self.addAction(optionsAction, QLineEdit.ActionPosition.LeadingPosition)
+
+        self.textChanged.connect(self.filterChanged)
+
+    # -----------------------------------------------------------------
+    def _onCaseToggled(self, checked):
+        self._caseSensitive = checked
+        self.filterChanged.emit()
+
+    def _onPatternChanged(self, action):
+        self._patternType = action.data()
+        self.filterChanged.emit()
+
+    def getCaseSensitivity(self):
+        return (
+            QtCore.Qt.CaseSensitivity.CaseSensitive
+            if self._caseSensitive
+            else QtCore.Qt.CaseSensitivity.CaseInsensitive
+        )
+
+    def getPatternType(self):
+        return self._patternType
+
+
+class VivFilterView(QWidget):
+    """
+    Container widget that wraps a VQVivTreeView subclass (the **Part**)
+    together with a VQFilterWidget in a vertical layout.
+    Subclasses set *view_type* to their Part class.
+    """
+
+    view_type = None
+
+    def __init__(self, vw, vwqgui, *args, **kwargs):
+        super().__init__()
+
+        self.view = self.view_type(vw, vwqgui, *args, **kwargs)
+        self.ffilt = VQFilterWidget(self)
+
+        layout = vq_basics.VBox(self.view, self.ffilt)
+        self.setLayout(layout)
+
+        self.ffilt.filterChanged.connect(self._onFilterChanged)
+        self.setWindowTitle(self.view.window_title)
+
+    def _onFilterChanged(self):
+        text = self.ffilt.text()
+        if not text:
+            self.view.filterModel.setFilterRegularExpression(QRegularExpression())
+            return
+
+        ptype = self.ffilt.getPatternType()
+        cs = self.ffilt.getCaseSensitivity()
+
+        if ptype == "wildcard":
+            # * -> .*   ? -> .
+            pattern = QRegularExpression.escape(text).replace(r"\*", ".*").replace(r"\?", ".")
+            regex = QRegularExpression(pattern, cs)
+        elif ptype == "regex":
+            regex = QRegularExpression(text, cs)
+        else:
+            # Fixed string: escape for regex matching
+            regex = QRegularExpression(QRegularExpression.escape(text), cs)
+
+        self.view.filterModel.setFilterRegularExpression(regex)
+
+    def __getattr__(self, name):
+        return getattr(self.view, name)
+
 
 class VQVivTreeView(vq_tree.VQTreeView, viv_base.VivEventCore):
 
@@ -79,9 +220,16 @@ class VQVivTreeView(vq_tree.VQTreeView, viv_base.VivEventCore):
         if not pnode:
             return
 
-        idx = self.model().createIndex(pnode.row(), col, pnode)
-        # We are *not* the edit role...
-        self.model().setData(idx, val, role=None)
+        # When a proxy model is in use, access the source model directly
+        # to avoid index-mapping issues (the proxy's setData expects proxy
+        # indexes but we create source-model indexes here).
+        model = self.model()
+        src = getattr(model, 'sourceModel', None)
+        if src is not None:
+            model = src()
+
+        idx = model.createIndex(pnode.row(), col, pnode)
+        model.setData(idx, val, role=QtCore.Qt.ItemDataRole.DisplayRole)
 
     def vivGetData(self, va, col):
         pnode = self._viv_va_nodes.get(va)
@@ -95,8 +243,10 @@ class VQVivLocView(VQVivTreeView):
 
     def __init__(self, vw, vwqgui):
         VQVivTreeView.__init__(self, vw, vwqgui)
-        model = VivNavModel(self._viv_navcol, parent=self, columns=self.columns)
-        self.setModel(model)
+        self.navModel = VivNavModel(self._viv_navcol, parent=self, columns=self.columns)
+        self.filterModel = VivFilterModel()
+        self.filterModel.setSourceModel(self.navModel)
+        self.setModel(self.filterModel)
         self.vqLoad()
         self.vqSizeColumns()
 
@@ -118,7 +268,7 @@ class VQVivLocView(VQVivTreeView):
     def vivAddLocation(self, lva, lsize, ltype, linfo):
         raise NotImplementedError("LocationViews must override vivAddLocation")
 
-class VQVivStringsView(VQVivLocView):
+class VQVivStringsViewPart(VQVivLocView):
 
     columns = ('Address','String')
     loctypes = (LOC_STRING, LOC_UNI)
@@ -132,7 +282,7 @@ class VQVivStringsView(VQVivLocView):
             s = s.decode('utf-8', 'ignore')
         self.vivAddRow(lva, '0x%.8x' % lva, repr(s))
 
-class VQVivImportsView(VQVivLocView):
+class VQVivImportsViewPart(VQVivLocView):
 
     columns = ('Address', 'Library', 'Function')
     loctypes = (LOC_IMPORT,)
@@ -142,7 +292,7 @@ class VQVivImportsView(VQVivLocView):
         libname, funcname = linfo.split('.', 1)
         self.vivAddRow(lva, '0x%.8x' % lva, libname, funcname)
 
-class VQVivStructsView(VQVivLocView):
+class VQVivStructsViewPart(VQVivLocView):
     columns = ('Address', 'Structure', 'Loc Name')
     loctypes = (LOC_STRUCT,)
     window_title = 'Structures'
@@ -151,14 +301,17 @@ class VQVivStructsView(VQVivLocView):
         sym = self.vw.getSymByAddr(lva)
         self.vivAddRow(lva, '0x%.8x' % lva, linfo, str(sym))
 
-class VQVivExportsView(VQVivTreeView):
+class VQVivExportsViewPart(VQVivTreeView):
 
     window_title = 'Exports'
     columns = ('Address', 'File', 'Export')
 
     def __init__(self, vw, vwqgui):
         VQVivTreeView.__init__(self, vw, vwqgui)
-        self.setModel( VivNavModel(self._viv_navcol, self, columns=self.columns) )
+        self.navModel = VivNavModel(self._viv_navcol, self, columns=self.columns)
+        self.filterModel = VivFilterModel()
+        self.filterModel.setSourceModel(self.navModel)
+        self.setModel(self.filterModel)
         self.vqLoad()
         self.vqSizeColumns()
 
@@ -173,7 +326,7 @@ class VQVivExportsView(VQVivTreeView):
         va, etype, ename, fname = einfo
         self.vivAddExport(va, etype, ename, fname)
 
-class VQVivSegmentsView(VQVivTreeView):
+class VQVivSegmentsViewPart(VQVivTreeView):
 
     _viv_navcol = 2
     window_title = 'Segments'
@@ -181,7 +334,10 @@ class VQVivSegmentsView(VQVivTreeView):
 
     def __init__(self, vw, vwqgui):
         VQVivTreeView.__init__(self, vw, vwqgui)
-        self.setModel( VivNavModel(self._viv_navcol, self, columns=self.columns) )
+        self.navModel = VivNavModel(self._viv_navcol, self, columns=self.columns)
+        self.filterModel = VivFilterModel()
+        self.filterModel.setSourceModel(self.navModel)
+        self.setModel(self.filterModel)
         self.vqLoad()
         self.vqSizeColumns()
 
@@ -189,7 +345,8 @@ class VQVivSegmentsView(VQVivTreeView):
         for va, size, sname, fname in self.vw.getSegments():
             self.vivAddRow(va, fname, sname, '0x%.8x' % va, str(size))
 
-class VQVivFunctionsView(VQVivTreeView):
+
+class VQVivFunctionsViewPart(VQVivTreeView):
 
     _viv_navcol = 0
     window_title = 'Functions'
@@ -197,7 +354,10 @@ class VQVivFunctionsView(VQVivTreeView):
 
     def __init__(self, vw, vwqgui):
         VQVivTreeView.__init__(self, vw, vwqgui)
-        self.setModel(VivNavModel(self._viv_navcol, self, columns=self.columns))
+        self.navModel = VivNavModel(self._viv_navcol, self, columns=self.columns)
+        self.filterModel = VivFilterModel()
+        self.filterModel.setSourceModel(self.navModel)
+        self.setModel(self.filterModel)
         self.vqLoad()
         self.vqSizeColumns()
 
@@ -296,7 +456,7 @@ vaset_reprHandlers = {
     VASET_COMPLEX: reprComplex,
 }
 
-class VQVivVaSetView(VQVivTreeView):
+class VQVivVaSetViewPart(VQVivTreeView):
 
     _viv_navcol = 0
 
@@ -308,7 +468,10 @@ class VQVivVaSetView(VQVivTreeView):
 
         VQVivTreeView.__init__(self, vw, vwqgui)
 
-        self.setModel( VivNavModel(self._viv_navcol, self, columns=cols) )
+        self.navModel = VivNavModel(self._viv_navcol, self, columns=cols)
+        self.filterModel = VivFilterModel()
+        self.filterModel.setSourceModel(self.navModel)
+        self.setModel(self.filterModel)
         self.vqLoad()
         self.vqSizeColumns()
         self.setWindowTitle('Va Set: %s' % setname)
@@ -344,7 +507,7 @@ class VQVivVaSetView(VQVivTreeView):
 
         return row
 
-class VQXrefView(VQVivTreeView):
+class VQXrefViewPart(VQVivTreeView):
 
     _viv_navcol = 0
 
@@ -353,8 +516,10 @@ class VQXrefView(VQVivTreeView):
         self.window_title = title
 
         VQVivTreeView.__init__(self, vw, vwqgui)
-        model = VivNavModel(self._viv_navcol, self, columns=('Xref From', 'Xref Type', 'Xref Flags', 'Func Name'))
-        self.setModel(model)
+        self.navModel = VivNavModel(self._viv_navcol, self, columns=('Xref From', 'Xref Type', 'Xref Flags', 'Func Name'))
+        self.filterModel = VivFilterModel()
+        self.filterModel.setSourceModel(self.navModel)
+        self.setModel(self.filterModel)
 
         for fromva, tova, rtype, rflags in xrefs:
             fva = vw.getFunction(fromva)
@@ -365,7 +530,7 @@ class VQXrefView(VQVivTreeView):
 
         self.vqSizeColumns()
 
-class VQVivNamesView(VQVivTreeView):
+class VQVivNamesViewPart(VQVivTreeView):
 
     _viv_navcol = 0
     window_title = 'Workspace Names'
@@ -373,7 +538,10 @@ class VQVivNamesView(VQVivTreeView):
 
     def __init__(self, vw, vwqgui):
         VQVivTreeView.__init__(self, vw, vwqgui)
-        self.setModel(VivNavModel(self._viv_navcol, self, columns=self.columns))
+        self.navModel = VivNavModel(self._viv_navcol, self, columns=self.columns)
+        self.filterModel = VivFilterModel()
+        self.filterModel.setSourceModel(self.navModel)
+        self.setModel(self.filterModel)
         self.vqLoad()
         self.vqSizeColumns()
 
@@ -392,3 +560,43 @@ class VQVivNamesView(VQVivTreeView):
             self.vivAddRow(va, '0x%.8x' % va, name)
         else:
             self.vivSetData(va, 1, name)
+
+
+# =============================================================================
+# Filtered view wrappers  (keep original class names for layout restoration)
+# =============================================================================
+
+class VQVivFunctionsView(VivFilterView):
+    view_type = VQVivFunctionsViewPart
+
+
+class VQVivNamesView(VivFilterView):
+    view_type = VQVivNamesViewPart
+
+
+class VQVivExportsView(VivFilterView):
+    view_type = VQVivExportsViewPart
+
+
+class VQVivVaSetView(VivFilterView):
+    view_type = VQVivVaSetViewPart
+
+
+class VQXrefView(VivFilterView):
+    view_type = VQXrefViewPart
+
+
+class VQVivStringsView(VivFilterView):
+    view_type = VQVivStringsViewPart
+
+
+class VQVivImportsView(VivFilterView):
+    view_type = VQVivImportsViewPart
+
+
+class VQVivStructsView(VivFilterView):
+    view_type = VQVivStructsViewPart
+
+
+class VQVivSegmentsView(VivFilterView):
+    view_type = VQVivSegmentsViewPart
