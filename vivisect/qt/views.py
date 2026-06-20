@@ -89,16 +89,25 @@ class VQFilterWidget(QLineEdit):
         optionsAction.setDefaultWidget(optionsBtn)
         self.addAction(optionsAction, QLineEdit.ActionPosition.LeadingPosition)
 
-        self.textChanged.connect(self.filterChanged)
+        # ---- debounce timer: don't filter on every keystroke ----
+        self._debounceTimer = QtCore.QTimer(self)
+        self._debounceTimer.setSingleShot(True)
+        self._debounceTimer.setInterval(300)
+        self._debounceTimer.timeout.connect(self._emitFilterChanged)
+
+        self.textChanged.connect(self._debounceTimer.start)
+
+    def _emitFilterChanged(self):
+        self.filterChanged.emit()
 
     # -----------------------------------------------------------------
     def _onCaseToggled(self, checked):
         self._caseSensitive = checked
-        self.filterChanged.emit()
+        self._debounceTimer.start()
 
     def _onPatternChanged(self, action):
         self._patternType = action.data()
-        self.filterChanged.emit()
+        self._debounceTimer.start()
 
     def getCaseSensitivity(self):
         return (
@@ -465,9 +474,19 @@ class VQVivVaSetViewPart(VQVivTreeView):
     _viv_navcol = 0
 
     def __init__(self, vw, vwqgui, setname):
-        self._va_setname = setname
+        self._va_setname = setname or 'unknown'
 
-        setdef = vw.getVaSetDef( setname )
+        if setname is None:
+            VQVivTreeView.__init__(self, vw, vwqgui)
+            self.navModel = VivNavModel(self._viv_navcol, self, columns=('Address',))
+            self.filterModel = VivFilterModel()
+            self.filterModel.setSourceModel(self.navModel)
+            self.setModel(self.filterModel)
+            self.setWindowTitle('Va Set (unrestorable — open from Tools menu)')
+            self.window_title = 'Va Set (unrestorable)'
+            return
+
+        setdef = vw.getVaSetDef(setname)
         cols = [ cname for (cname,ctype) in setdef ]
 
         VQVivTreeView.__init__(self, vw, vwqgui)
@@ -479,6 +498,7 @@ class VQVivVaSetViewPart(VQVivTreeView):
         self.vqLoad()
         self.vqSizeColumns()
         self.setWindowTitle('Va Set: %s' % setname)
+        self.window_title = 'Va Set: %s' % setname
 
     def VWE_SETVASETROW(self, vw, event, einfo):
         setname, row = einfo
