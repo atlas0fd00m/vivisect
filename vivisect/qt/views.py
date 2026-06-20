@@ -4,6 +4,7 @@ import vivisect.base as viv_base
 import envi.qt.memory as e_q_memory
 import vivisect.qt.ctxmenu as v_q_ctxmenu
 
+from PyQt6 import QtCore
 from PyQt6.QtCore import QSortFilterProxyModel, QRegularExpression
 from PyQt6.QtGui import QActionGroup
 from PyQt6.QtWidgets import QMenu, QWidget, QLineEdit, QToolButton, QWidgetAction
@@ -30,7 +31,10 @@ class VivFilterModel(QSortFilterProxyModel):
     def __getattr__(self, name):
         # Delegate attribute lookups to the source model so
         # vivAddRow / append / vqDelRow etc. pass through transparently.
-        return getattr(self.sourceModel(), name)
+        src = self.sourceModel()
+        if src is None:
+            raise AttributeError(name)
+        return getattr(src, name)
 
 
 class VQFilterWidget(QLineEdit):
