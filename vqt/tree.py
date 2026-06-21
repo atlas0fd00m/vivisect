@@ -14,13 +14,15 @@ class VQTreeItem(object):
         self.children.append(child)
         return child
 
-    def delete(self, rowdata):
-        idx = 0
-        for child in self.children:
-            if child.rowdata == rowdata:
+    def delete(self, child_item):
+        """
+        Remove and return *child_item* from this node's children by identity.
+        Returns None if *child_item* is not a child of this node.
+        """
+        for idx, child in enumerate(self.children):
+            if child is child_item:
                 return self.children.pop(idx)
-
-            idx += 1
+        return None
 
     def child(self, row):
         return self.children[row]
@@ -92,7 +94,15 @@ class VQTreeModel(QtCore.QAbstractItemModel):
         if parent is None:
             parent = self.rootnode
 
-        parent.delete(rowdata)
+        row = rowdata.row() if rowdata in parent.children else -1
+        if row < 0:
+            return None
+
+        pidx = self.createIndex(parent.row(), 0, parent)
+        self.beginRemoveRows(pidx, row, row)
+        node = parent.delete(rowdata)
+        self.endRemoveRows()
+        return node
 
     def sort(self, colnum, order=QtCore.Qt.SortOrder.AscendingOrder):
         self._sort_column = colnum
@@ -216,8 +226,17 @@ class VQTreeView(QTreeView):
             self.resizeColumnToContents(i)
 
     def setModel(self, model):
-        model.dataChanged.connect( self.dataChanged )
-        model.rowsInserted.connect( self.rowsInserted )
+        """
+        Set the view model and force ascending sort on column 0 for Qt6.
+
+        NOTE: QAbstractItemView.setModel() already connects the model's
+        dataChanged / rowsInserted / rowsRemoved / etc. signals to the
+        view's internal slots.  Do NOT reconnect them here — doing so
+        causes double-firing that corrupts the view's item cache
+        (especially when a QSortFilterProxyModel is in the signal chain,
+        where each source-row insertion already goes through two rounds
+        of signal translation).
+        """
         ret = QTreeView.setModel(self, model)
         # Qt6's header defaults to descending when sorting is enabled;
         # force ascending on column 0 to match user expectations.
