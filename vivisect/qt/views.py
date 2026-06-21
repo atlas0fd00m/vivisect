@@ -14,7 +14,25 @@ from vqt.common import *
 from vivisect.const import *
 
 class VivNavModel(e_q_memory.EnviNavModel):
-    pass
+    """
+    Navigation model used as the source model for all VQ tree views.
+    Override append() to skip the internal VQTreeModel.sort() call,
+    since sorting is handled at the proxy level (VivFilterModel with
+    dynamicSortFilter=True).  Without this override the sort() inside
+    append() fires layoutAboutToBeChanged/layoutChanged on the source
+    model while the proxy is still processing the rowsInserted signal,
+    corrupting the view's internal item cache and causing a segfault.
+    """
+
+    def append(self, rowdata, parent=None):
+        if parent is None:
+            parent = self.rootnode
+        pidx = self.createIndex(parent.row(), 0, parent)
+        i = len(parent.children)
+        self.beginInsertRows(pidx, i, i)
+        node = parent.append(rowdata)
+        self.endInsertRows()
+        return node
 
 
 class VivFilterModel(QSortFilterProxyModel):
@@ -209,7 +227,12 @@ class VQVivTreeView(vq_tree.VQTreeView, viv_base.VivEventCore):
         menu.exec(event.globalPos())
 
     def vivAddRow(self, va, *row):
-        node = self.model().append(row)
+        # Access source model directly when a proxy is in use
+        model = self.model()
+        src = getattr(model, 'sourceModel', None)
+        if src is not None:
+            model = src()
+        node = model.append(row)
         node.va = va
         self._viv_va_nodes[va] = node
         return node
@@ -217,7 +240,11 @@ class VQVivTreeView(vq_tree.VQTreeView, viv_base.VivEventCore):
     def vivDelRow(self, va):
         node = self._viv_va_nodes.pop(va, None)
         if node:
-            self.model().vqDelRow(node)
+            model = self.model()
+            src = getattr(model, 'sourceModel', None)
+            if src is not None:
+                model = src()
+            model.vqDelRow(node)
 
     def vivSetData(self, va, col, val):
         '''
