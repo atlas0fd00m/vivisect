@@ -8,6 +8,9 @@
 .idea
 .DS_Store
 coverage_html_report*
+.coverage
+.coverage.*
+coverage.xml
 *~
 _build
 build
