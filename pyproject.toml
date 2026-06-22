@@ -36,7 +36,12 @@ Changelog = 'https://vivisect.readthedocs.io/en/latest/vivisect/changelog.html'
 
 [project.optional-dependencies]
 dev = [
-    'bump2version>=1.0.0,<1.1.0'
+    'bump2version>=1.0.0,<1.1.0',
+]
+
+test = [
+    'pyqt6>=6.5.0',
+    'pyqt6-webengine>=6.5.0',
 ]
 
 docs = [
