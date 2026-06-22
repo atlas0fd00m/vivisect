@@ -1,0 +1,90 @@
+name: test
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  headless-qt-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq libxcb-cursor0 libxkbcommon-x11-0
+
+    - name: Install Python dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -e ".[test]"
+
+    - name: Run Qt unit tests (vqt)
+      run: |
+        QT_QPA_PLATFORM=offscreen python -m unittest discover -s vqt/tests -p 'test_qt*.py' -v
+      timeout-minutes: 5
+
+    - name: Run Qt unit tests (vdb)
+      run: |
+        QT_QPA_PLATFORM=offscreen python -m unittest discover -s vdb/tests -p 'test_qt*.py' -v
+      timeout-minutes: 5
+
+    - name: Run full vqt suite
+      run: |
+        QT_QPA_PLATFORM=offscreen python -m unittest discover -s vqt/tests -p 'test_*.py' -v
+      timeout-minutes: 5
+
+  coverage:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq libxcb-cursor0 libxkbcommon-x11-0
+
+    - name: Install Python dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -e ".[test]"
+
+    - name: Run coverage (vqt)
+      run: |
+        QT_QPA_PLATFORM=offscreen \
+          python -m coverage run \
+            --source=vqt \
+            --omit='*/tests/*' \
+            -m unittest discover -s vqt/tests -p 'test_qt*.py' -v
+
+    - name: Coverage report
+      run: |
+        python -m coverage report -m
+        python -m coverage xml -o coverage.xml
+
+    - name: Upload coverage artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage.xml

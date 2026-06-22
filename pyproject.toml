@@ -42,6 +42,7 @@ dev = [
 test = [
     'pyqt6>=6.5.0',
     'pyqt6-webengine>=6.5.0',
+    'coverage>=7.0.0',
 ]
 
 docs = [
