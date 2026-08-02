@@ -1212,9 +1212,25 @@ def normName(name):
 def demangle(name):
     '''
     Translate C++ mangled name back into the verbose C++ symbol name (with helpful type info)
-    '''
-    name = normName(name)
 
+    Uses the vivisect.demangle library which supports Itanium (GCC/Clang),
+    MSVC, Rust, D, Swift, JNI, and Objective-C mangling formats.  Falls back
+    to cxxfilt for Itanium if the pure-Python parser is not yet implemented.
+    '''
+    try:
+        from vivisect.demangle import demangle as _demangle
+        result = _demangle(name)
+        if result and result != normName(name):
+            return result
+        # If demangle returned the original, still try cxxfilt for backward compat
+        # (the new library's Itanium handler already tries cxxfilt, so this is
+        # just a safety net)
+        return result
+    except Exception as e:
+        logger.debug('vivisect.demangle failed for %r: %r', name, e)
+
+    # Fallback to cxxfilt if the new library is unavailable
+    name = normName(name)
     try:
         import cxxfilt
         name = cxxfilt.demangle(name)
