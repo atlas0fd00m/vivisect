@@ -100,6 +100,9 @@ class DemangledSymbol:
             return NotImplemented
         return self.full_name == other.full_name and self.format == other.format
 
+    def __hash__(self):
+        return hash((self.format, self.full_name))
+
     def __str__(self):
         return self.full_name
 
@@ -128,11 +131,10 @@ def normalize_name(name):
         return name
     # Strip @@VERSION suffixes (ELF dynamic linker convention).
     # MSVC mangled symbols start with '?' and use @@ as a scope terminator,
-    # so don't strip those.
+    # so don't strip those.  Use the regex to only strip if the content after
+    # @@ looks like a version string (not just any @@).
     if not name.startswith('?'):
-        idx = name.find('@@')
-        if idx > -1:
-            name = name[:idx]
+        name = _VERSION_SUFFIX_RE.sub('', name)
     # Strip trailing NUL
     if name.endswith('\x00'):
         name = name[:-1]

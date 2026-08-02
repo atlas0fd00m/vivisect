@@ -69,6 +69,19 @@ class TestDetectFormat(unittest.TestCase):
         """_GLOBAL_ symbols should not be detected as D format."""
         self.assertNotEqual(detect_format('_GLOBAL__sub_I_some_file.cpp'), FORMAT_D)
 
+    def test_common_elf_symbols_not_d(self):
+        """Common ELF symbols starting with _D must not be detected as D format."""
+        # These are real ELF symbol names that must NOT route to D
+        self.assertEqual(detect_format('_DYNAMIC'), FORMAT_UNKNOWN)
+        self.assertEqual(detect_format('_DATA'), FORMAT_UNKNOWN)
+        self.assertEqual(detect_format('_DWARF'), FORMAT_UNKNOWN)
+        self.assertEqual(detect_format('_DEFAULT'), FORMAT_UNKNOWN)
+        self.assertEqual(detect_format('_DTORS'), FORMAT_UNKNOWN)
+        self.assertEqual(detect_format('_DTRACE'), FORMAT_UNKNOWN)
+        # Real D symbols still detected correctly
+        self.assertEqual(detect_format('_Dmain'), FORMAT_D)
+        self.assertEqual(detect_format('_D3foo3barFiZv'), FORMAT_D)
+
 
 class TestNormalizeName(unittest.TestCase):
     """Test name normalization."""
@@ -201,6 +214,17 @@ class TestStructuredOutput(unittest.TestCase):
         self.assertEqual(sym.format, FORMAT_UNKNOWN)
         self.assertEqual(sym.full_name, 'plain_symbol')
 
+    def test_original_mangled_preserved_with_version_suffix(self):
+        """original_mangled must preserve the true original, not the normalized form."""
+        sym = demangle('_ZN3foo3barEv@@GLIBC_2.4', structured=True)
+        self.assertEqual(sym.original_mangled, '_ZN3foo3barEv@@GLIBC_2.4')
+        self.assertEqual(sym.full_name, 'foo::bar()')
+
+    def test_original_mangled_preserved_plain(self):
+        """original_mangled must match input when no normalization occurs."""
+        sym = demangle('_ZN3foo3barEv', structured=True)
+        self.assertEqual(sym.original_mangled, '_ZN3foo3barEv')
+
     def test_demangled_symbol_str(self):
         """DemangledSymbol.__str__ should return full_name."""
         sym = DemangledSymbol(full_name='foo::bar()')
@@ -214,6 +238,33 @@ class TestStructuredOutput(unittest.TestCase):
         self.assertEqual(d['full_name'], 'foo()')
         self.assertIn('original_mangled', d)
         self.assertIn('parse_warnings', d)
+
+    def test_demangled_symbol_eq(self):
+        """DemangledSymbol.__eq__ should compare format and full_name."""
+        a = DemangledSymbol(format='itanium', full_name='foo()')
+        b = DemangledSymbol(format='itanium', full_name='foo()')
+        c = DemangledSymbol(format='msvc', full_name='foo()')
+        d = DemangledSymbol(format='itanium', full_name='bar()')
+        self.assertEqual(a, b)
+        self.assertNotEqual(a, c)
+        self.assertNotEqual(a, d)
+        self.assertNotEqual(a, 'foo()')
+
+    def test_demangled_symbol_hash(self):
+        """DemangledSymbol.__hash__ should allow set/dict usage."""
+        a = DemangledSymbol(format='itanium', full_name='foo()')
+        b = DemangledSymbol(format='itanium', full_name='foo()')
+        s = {a, b}
+        self.assertEqual(len(s), 1)
+        d = {a: 'val'}
+        self.assertEqual(d[b], 'val')
+
+    def test_demangled_symbol_repr(self):
+        """DemangledSymbol.__repr__ should include format and full_name."""
+        sym = DemangledSymbol(format='itanium', full_name='foo()')
+        r = repr(sym)
+        self.assertIn('itanium', r)
+        self.assertIn('foo()', r)
 
 
 class TestItaniumDemangle(unittest.TestCase):

@@ -77,7 +77,7 @@ def detect_format(mangled):
     if not mangled:
         return FORMAT_UNKNOWN
 
-    # Itanium: _Z or __Z prefix (old GCC used __Z)
+    # Itanium: _Z prefix, or __Z prefix (old GCC/NM)
     if mangled.startswith('_Z') or mangled.startswith('__Z'):
         # Rust legacy also uses _Z but with specific patterns (e.g. _ZN3foo...h<hex>E)
         # We try Itanium first; the Rust handler will fall back if Itanium parse
@@ -92,9 +92,11 @@ def detect_format(mangled):
     if mangled.startswith('_R'):
         return FORMAT_RUST
 
-    # D language: _D prefix (but not _GLOBAL__ etc.)
-    if mangled.startswith('_D') and not mangled.startswith('_GLOBAL'):
-        return FORMAT_D
+    # D language: _D prefix followed by a digit (length-prefixed name) or 'main'
+    # Must be tight to avoid matching common ELF symbols like _DYNAMIC, _DATA, etc.
+    if mangled.startswith('_D') and len(mangled) > 2:
+        if mangled[2].isdigit() or mangled[2:6] == 'main':
+            return FORMAT_D
 
     # Swift: $s, $S, _T0, $e prefixes
     if mangled.startswith('$s') or mangled.startswith('$S') or mangled.startswith('_T0'):
@@ -141,17 +143,15 @@ def demangle(mangled, fmt=None, structured=False):
     if not mangled:
         return mangled
 
-    # Normalize the name (strip @@VERSION suffixes, trailing NUL, etc.)
-    # before format detection so that e.g. "foo@@GLIBC_2.4" is handled
-    # correctly.
-    normalized = normalize_name(mangled)
-
+    # Detect format from the normalized name (so @@VERSION suffixes don't
+    # interfere with prefix detection), but pass the ORIGINAL to handlers.
     if fmt is None:
-        fmt = detect_format(normalized)
+        fmt = detect_format(normalize_name(mangled))
 
     handler = _DISPATCH.get(fmt)
     if handler is None:
         # Unknown format — return normalized name (strips @@VERSION etc.)
+        normalized = normalize_name(mangled)
         if structured:
             return DemangledSymbol(
                 format=FORMAT_UNKNOWN,
@@ -163,9 +163,12 @@ def demangle(mangled, fmt=None, structured=False):
         return normalized
 
     try:
-        return handler(normalized, structured=structured)
+        # Pass the ORIGINAL mangled name — handlers normalize internally
+        # and preserve the true original in DemangledSymbol.original_mangled
+        return handler(mangled, structured=structured)
     except Exception as e:
         # Graceful degradation: never crash binary loading
+        normalized = normalize_name(mangled)
         if structured:
             return DemangledSymbol(
                 format=fmt,

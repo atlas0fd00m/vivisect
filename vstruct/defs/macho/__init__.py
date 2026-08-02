@@ -40,7 +40,6 @@ class mach_o(vstruct.VStruct):
         self._symbols = []
         psize = self.getPointerSize()
         is_64 = (psize == 8)
-        bigend = self.vsGetEndian()
 
         for fname, vs in self.load_commands:
             if vs.cmd != LC_SYMTAB:

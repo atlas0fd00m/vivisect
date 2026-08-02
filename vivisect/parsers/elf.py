@@ -1215,21 +1215,15 @@ def demangle(name):
 
     Uses the vivisect.demangle library which supports Itanium (GCC/Clang),
     MSVC, Rust, D, Swift, JNI, and Objective-C mangling formats.  Falls back
-    to cxxfilt for Itanium if the pure-Python parser is not yet implemented.
+    to cxxfilt if the new library is unavailable (import failure only).
     '''
     try:
         from vivisect.demangle import demangle as _demangle
-        result = _demangle(name)
-        if result and result != normName(name):
-            return result
-        # If demangle returned the original, still try cxxfilt for backward compat
-        # (the new library's Itanium handler already tries cxxfilt, so this is
-        # just a safety net)
-        return result
+        return _demangle(name)
     except Exception as e:
         logger.debug('vivisect.demangle failed for %r: %r', name, e)
 
-    # Fallback to cxxfilt if the new library is unavailable
+    # Fallback to cxxfilt if the new library is unavailable (import failure)
     name = normName(name)
     try:
         import cxxfilt
