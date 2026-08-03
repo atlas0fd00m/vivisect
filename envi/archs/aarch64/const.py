@@ -1,6 +1,3 @@
-
-
-
 MODE_ARM        = 0
 MODE_THUMB      = 1
 MODE_JAZELLE    = 2
@@ -710,6 +707,27 @@ instrnames = [
     'XPACLRI',
     'FMINNMP',
     'UQSHL',
+    # SVE contiguous store instructions
+    'ST1B',
+    'ST1H',
+    'ST1W',
+    'ST1D',
+    'ST2B',
+    'ST2H',
+    'ST2W',
+    'ST2D',
+    'ST3B',
+    'ST3H',
+    'ST3W',
+    'ST3D',
+    'ST4B',
+    'ST4H',
+    'ST4W',
+    'ST4D',
+    'STNT1B',
+    'STNT1H',
+    'STNT1W',
+    'STNT1D',
 ]
 
 ins_index = 85
