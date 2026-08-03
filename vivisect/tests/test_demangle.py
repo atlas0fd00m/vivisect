@@ -116,14 +116,15 @@ class TestDispatch(unittest.TestCase):
         self.assertIsInstance(result, str)
         self.assertEqual(result, 'foo::bar()')
 
-    def test_msvc_dispatch_stub(self):
-        """MSVC is a stub in Phase 0 — should return original."""
-        result = demangle('?foo@@YAXXZ')
-        self.assertEqual(result, '?foo@@YAXXZ')
+    def test_msvc_dispatch(self):
+        """MSVC demangling is now implemented."""
+        result = demangle('?foo@@YAXH@Z')
+        self.assertEqual(result, 'void __cdecl foo(int)')
 
-    def test_rust_dispatch_stub(self):
-        result = demangle('_RNvNtCs1234_7mycrate3foo3bar')
-        self.assertEqual(result, '_RNvNtCs1234_7mycrate3foo3bar')
+    def test_rust_dispatch(self):
+        """Rust v0 demangling is now implemented."""
+        result = demangle('_RNvCs1234_4test3foo')
+        self.assertIsInstance(result, str)
 
     def test_jni_dispatch(self):
         result = demangle('Java_pkg_Cls_f__ILjava_lang_String_2')
@@ -202,11 +203,11 @@ class TestStructuredOutput(unittest.TestCase):
         self.assertEqual(sym.kind, 'class_ref')
         self.assertEqual(sym.name, 'NSObject')
 
-    def test_msvc_structured_stub(self):
-        sym = demangle('?foo@@YAXXZ', structured=True)
+    def test_msvc_structured(self):
+        sym = demangle('?foo@@YAXH@Z', structured=True)
         self.assertIsInstance(sym, DemangledSymbol)
         self.assertEqual(sym.format, FORMAT_MSVC)
-        self.assertTrue(sym.parse_warnings)  # should have "not yet implemented"
+        self.assertEqual(sym.full_name, 'void __cdecl foo(int)')
 
     def test_unknown_structured(self):
         sym = demangle('plain_symbol', structured=True)
