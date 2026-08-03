@@ -299,6 +299,32 @@ class TestItaniumDemangle(unittest.TestCase):
         # _Z3foov is a function (v = void params), demangles to 'foo()'
         self.assertEqual(demangle('_Z3foov@@GLIBC_2.4'), 'foo()')
 
+    def test_pointer_to_member_function(self):
+        """Pointer-to-member function types with CV/ref qualifiers."""
+        # const & ref-qualifier
+        self.assertEqual(demangle('_Z1fM1AKFvvRE'),
+                         'f(void (A::*)() const &)')
+        # const only, no ref
+        self.assertEqual(demangle('_Z1fM1AKFvvE'),
+                         'f(void (A::*)() const)')
+        # no CV, no ref
+        self.assertEqual(demangle('_Z1fM1AFvvE'),
+                         'f(void (A::*)())')
+        # ref only, no const
+        self.assertEqual(demangle('_Z1fM1AFvvRE'),
+                         'f(void (A::*)() &)')
+        # const && (rvalue ref)
+        self.assertEqual(demangle('_Z1fM1AKFvvOE'),
+                         'f(void (A::*)() const &&)')
+
+    def test_pointer_to_member_data(self):
+        """Pointer-to-member data (non-function member type)."""
+        # M <class> <type> where type is not a function
+        # _Z1fM1Ai => f(int A::*)
+        result = demangle('_Z1fM1Ai')
+        self.assertIn('A::*', result)
+        self.assertIn('int', result)
+
 
 class TestJNIDemangle(unittest.TestCase):
     """Test JNI native method name demangling."""
