@@ -151,12 +151,6 @@ def makeStringTable(vw, va, maxva):
                 logger.warning("makeStringTable\t%r", e)
                 return
 
-            l = vw.makeString(va)
-            va += l[v_const.L_SIZE]
-
-        except Exception as e:
-            logger.warning("makeStringTable\t%r", e)
-            return
 
 def makeSymbolTable(vw, va, maxva):
     ret = []
