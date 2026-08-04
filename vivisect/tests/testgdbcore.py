@@ -21,7 +21,7 @@ class GdbCoreDumpTests(unittest.TestCase):
     def setUpClass(cls):
         cls.test_bin_path = None
         try:
-            cls.test_bin_path = helpers.getTestPath('linux-amd64-gdb-core.bin')
+            cls.test_bin_path = helpers.getTestPath('linux/amd64/gdb_dumps/spawned_test_core_v1.bin')
         except unittest.SkipTest:
             # VIVTESTFILES not set - skip all tests
             raise
