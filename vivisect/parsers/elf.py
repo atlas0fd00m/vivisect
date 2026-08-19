@@ -581,8 +581,7 @@ def loadElfIntoWorkspace(vw, elf, filename=None, baseaddr=None):
         # Update the VLE pages
         logger.info("Adding PowerPC VLE pages %s" % vle_pages)
 
-        # Turn the list into a dict before writing it
-        vw.setMeta('PpcVlePages', dict((i, m) for i, m in enumerate(vle_pages)))
+        vw.setMeta('PpcVlePages', vle_pages)
 
 
         # If all of the loaded and executable sections are VLE, then change this

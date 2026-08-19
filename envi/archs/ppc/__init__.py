@@ -190,11 +190,7 @@ class Ppc64EmbeddedModule(envi.ArchitectureModule):
             3. ELF parsing
             4. command line
         '''
-        # Handle a few different map input styles
-        if isinstance(maps, dict):
-            vlemaps = [e[:2] for e in maps.values() if (len(e) == 2) or (len(e) == 3 and e[2])]
-        else:
-            vlemaps = [e[:2] for e in maps if (len(e) == 2) or (len(e) == 3 and e[2])]
+        vlemaps = [e[:2] for e in maps if (len(e) == 2) or (len(e) == 3 and e[2])]
 
         # Use the mapped VLE addresses and sizes to determine a common page size
         lowest_set_lsbs = [_getLSBSet(self._page_size, self.psize)] + \
