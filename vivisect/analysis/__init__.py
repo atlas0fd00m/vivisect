@@ -5,15 +5,15 @@ for different phases of analysis on different platforms.
 """
 
 import logging
-logger = logging.getLogger(__name__)
 
+import vivisect.analysis.i386 as viv_analysis_i386
+
+logger = logging.getLogger(__name__)
 ARM_ARCHS = ('arm', 'thumb', 'thumb16')
 PPC_ARCHS = ('ppc', 'vle', 'ppc-embedded', 'ppc-server', 'ppc32-embedded', 'ppc32-server', 'ppc64-embedded', 'ppc64-server', )
 
 def addAnalysisModules(vw):
 
-    import vivisect
-    import vivisect.analysis.i386 as viv_analysis_i386
 
     arch = vw.getMeta('Architecture')
     fmt = vw.getMeta('Format')
@@ -79,6 +79,9 @@ def addAnalysisModules(vw):
         elif arch in ARM_ARCHS:
             vw.addFuncAnalysisModule("vivisect.analysis.arm.emulation")
 
+        elif arch in ('aarch64', 'a64'):
+            vw.addFuncAnalysisModule("vivisect.analysis.aarch64.emulation")
+
         # See if we got lucky and got arg/local hints from symbols
         vw.addAnalysisModule('vivisect.analysis.ms.localhints')
         # Find import thunks
@@ -100,7 +103,7 @@ def addAnalysisModules(vw):
         vw.addAnalysisModule("vivisect.analysis.generic.entrypoints")
         vw.addAnalysisModule("vivisect.analysis.elf")
 
-        if arch in ('i386', 'amd64', 'arm'):
+        if arch in ('i386', 'amd64', 'arm', 'aarch64', 'a64'):
             vw.addImpApi('posix', arch)
 
         if arch == 'i386':
@@ -133,6 +136,9 @@ def addAnalysisModules(vw):
 
         elif arch == 'amd64':
             vw.addFuncAnalysisModule("vivisect.analysis.amd64.emulation")
+
+        elif arch in ('aarch64', 'a64'):
+            vw.addFuncAnalysisModule("vivisect.analysis.aarch64.emulation")
 
         elif arch in ARM_ARCHS:
             vw.addFuncAnalysisModule("vivisect.analysis.arm.emulation")
@@ -182,6 +188,9 @@ def addAnalysisModules(vw):
         elif arch in PPC_ARCHS:
             vw.addFuncAnalysisModule("vivisect.analysis.ppc.emulation")
 
+        elif arch in ('aarch64', 'a64'):
+            vw.addFuncAnalysisModule("vivisect.analysis.aarch64.emulation")
+
         elif arch in ARM_ARCHS:
             vw.addFuncAnalysisModule("vivisect.analysis.arm.emulation")
             vw.addFuncAnalysisModule('vivisect.analysis.arm.renaming')
@@ -212,6 +221,9 @@ def addAnalysisModules(vw):
         elif arch in ARM_ARCHS:
             vw.addFuncAnalysisModule("vivisect.analysis.arm.emulation")
             vw.addFuncAnalysisModule('vivisect.analysis.arm.renaming')
+
+        elif arch in ('aarch64', 'a64'):
+            vw.addFuncAnalysisModule("vivisect.analysis.aarch64.emulation")
 
         vw.addFuncAnalysisModule("vivisect.analysis.generic.symswitchcase")
         vw.addFuncAnalysisModule("vivisect.analysis.generic.impapi")
@@ -273,6 +285,42 @@ def addAnalysisModules(vw):
         if arch in ARM_ARCHS:
             vw.addFuncAnalysisModule("vivisect.analysis.arm.emulation")
             vw.addFuncAnalysisModule('vivisect.analysis.arm.renaming')
+
+        elif arch in ('aarch64', 'a64'):
+            vw.addFuncAnalysisModule("vivisect.analysis.aarch64.emulation")
+
+        vw.addFuncAnalysisModule("vivisect.analysis.generic.symswitchcase")
+        vw.addFuncAnalysisModule("vivisect.analysis.generic.thunks")
+
+    elif fmt == 'vbf': # VBF ######################################################
+        # TODO: None of this exists
+        #if arch in PPC_ARCHS:
+        #    # Initial VLE pages must be managed manually for bare
+        #    # metal/embedded PowerPC targets
+        #    vw.addAnalysisModule("vivisect.analysis.ppc.vlepages")
+
+        #    # potentially tags a new EntryPoint, so must preceed entrypoints
+        #    vw.addAnalysisModule("vivisect.analysis.ppc.bootstrap")
+
+        vw.addAnalysisModule("vivisect.analysis.generic.entrypoints")
+        vw.addAnalysisModule("vivisect.analysis.generic.funcentries")
+        vw.addAnalysisModule("vivisect.analysis.generic.relocations")
+        vw.addAnalysisModule("vivisect.analysis.generic.pointertables")
+        vw.addAnalysisModule("vivisect.analysis.generic.emucode")
+
+        vw.addFuncAnalysisModule("vivisect.analysis.generic.codeblocks")
+        vw.addFuncAnalysisModule("vivisect.analysis.generic.impapi")
+
+        if arch in ARM_ARCHS:
+            vw.addFuncAnalysisModule("vivisect.analysis.arm.emulation")
+            vw.addFuncAnalysisModule('vivisect.analysis.arm.renaming')
+
+        if arch in ARM_ARCHS:
+            vw.addFuncAnalysisModule("vivisect.analysis.arm.emulation")
+            vw.addFuncAnalysisModule('vivisect.analysis.arm.renaming')
+
+        elif arch in ('aarch64', 'a64'):
+            vw.addFuncAnalysisModule("vivisect.analysis.aarch64.emulation")
 
         vw.addFuncAnalysisModule("vivisect.analysis.generic.symswitchcase")
         vw.addFuncAnalysisModule("vivisect.analysis.generic.thunks")

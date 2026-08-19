@@ -48,9 +48,10 @@ import logging
 import collections
 
 import envi
-import vivisect
-import envi.common as e_cmn
+import envi.common as e_common
 import envi.archs.i386 as e_i386
+
+import vivisect.const as v_const
 
 logger = logging.getLogger(__name__)
 
@@ -204,6 +205,7 @@ def analyzePLT(vw, ssva, ssize):
             return
 
         while sva < nextseg:
+            skip = False
             logger.debug('analyzePLT(0x%x, 0x%x) first pass:  sva: 0x%x   nextseg: 0x%x', ssva, ssize, sva, nextseg)
             if vw.getLocation(sva) is None:
                 logger.debug('making code: 0x%x', sva)
@@ -218,7 +220,7 @@ def analyzePLT(vw, ssva, ssize):
             if ltup is not None:
                 lva, lsz, ltype, ltinfo = ltup
                 # if the location is an Opcode, check for branch info
-                if ltype == vivisect.LOC_OP:
+                if ltype == v_const.LOC_OP:
                     op = vw.parseOpcode(lva)
                     emu.setProgramCounter(lva)
                     if op.iflags & envi.IF_BRANCH and \
@@ -234,8 +236,15 @@ def analyzePLT(vw, ssva, ssize):
                         tbrref = op.opers[-1].getOperAddr(op, emu=emu)
                         realplt = not bool(tbrva == ssva)
 
+                        if tbrref is None:
+                            if tbrva:
+                                logger.debug("Skipping branch as target branch reference is None (op: 0x%x   tgt: 0x%x)", lva, tbrva)
+                            else:
+                                logger.debug("Skipping branch as target branch reference is None (op: 0x%x)", lva)
+                            skip = True
+
                         # since the above check will "fail open", refine check if True
-                        if realplt:
+                        if realplt and not skip:
                             loc = vw.getLocation(tbrref)
                             tgt_seg = vw.getSegment(tbrref)
 
@@ -244,11 +253,11 @@ def analyzePLT(vw, ssva, ssize):
                             if loc is None:
                                 realplt = False
 
-                            # if target is in the ELF Section with a name starting with ".got" 
+                            # if target is in the ELF Section with a name starting with ".got"
                             # OR that the target address is after the DT_PLTGOT entry (
                             elif tgt_seg is not None:
                                 tsegva, tsegsz, tsegname, tsegfile = tgt_seg
-                                # see if the target address segment is GOT, but 
+                                # see if the target address segment is GOT, but
                                 # also don't let it be the first entry, which is the LazyLoader
                                 if not (tsegname.startswith('.got') and tsegva != lva):
                                     logger.debug("0x%x: tbrref not in GOT (segment)", tbrref)
@@ -281,7 +290,8 @@ def analyzePLT(vw, ssva, ssize):
                         branchvas.append((op.va, realplt, tbrva, op))
 
                     # after analyzing the situation, emulate the opcode
-                    emu.executeOpcode(op)
+                    if not skip:
+                        emu.executeOpcode(op)
 
                 sva += lsz
                 logger.debug('incrementing to next va: 0x%x', sva)
@@ -290,7 +300,7 @@ def analyzePLT(vw, ssva, ssize):
                 sva += 1
 
     except Exception as e:
-        logger.error('analyzePLT(0x%x, %r): %s', ssva, ssize, str(e))
+        logger.exception('analyzePLT(0x%x, %r): %s', ssva, ssize, str(e))
 
 
 MAX_OPS = 10
@@ -300,15 +310,14 @@ def analyzeFunction(vw, funcva):
     plts = getPLTs(vw)
     isplt = False
     for pltva, pltsz in plts:
-        if pltva <= funcva <= (pltva + pltsz):
+        if pltva <= funcva < (pltva + pltsz):
             isplt = True
             segva = pltva
-            segsize = pltsz
             break
 
-    # if we're not 
+    # if we're not
     if not isplt:
-        logger.log(e_cmn.SHITE, '0x%x: not part of a .plt section', funcva)
+        logger.log(e_common.SHITE, '0x%x: not part of a .plt section', funcva)
         return
 
     logger.info('analyzing PLT function: 0x%x', funcva)
@@ -330,7 +339,7 @@ def analyzeFunction(vw, funcva):
             emu.executeOpcode(op)
             opva += len(op)
             op = vw.parseOpcode(opva)
-            logger.log(e_cmn.SHITE, "0x%x: %r", opva, op)
+            logger.log(e_common.SHITE, "0x%x: %r", opva, op)
             count += 1
     except Exception as e:
         logger.warning('failure analyzing PLT func 0x%x: %r', funcva, e)
@@ -372,14 +381,14 @@ def analyzeFunction(vw, funcva):
             # add the xref to whatever location referenced (assuming the opref hack worked)
             if vw.isValidPointer(opref):
                 logger.debug('reference 0x%x is valid, adding Xref', opref)
-                vw.addXref(op.va, opref, vivisect.REF_DATA)
+                vw.addXref(op.va, opref, v_const.REF_DATA)
 
-            if ltype == vivisect.LOC_IMPORT:
+            if ltype == v_const.LOC_IMPORT:
                 # import locations store the name as ltinfo
                 funcname = ltinfo
                 logger.debug("0x%x: (0x%x) LOC_IMPORT by BR_DEREF %r", funcva, opval, funcname)
 
-            elif ltype == vivisect.LOC_POINTER:
+            elif ltype == v_const.LOC_POINTER:
                 # we have a deref to a pointer.
                 funcname = vw.getName(ltinfo)
                 if ltinfo:
@@ -402,6 +411,8 @@ def analyzeFunction(vw, funcva):
                 lva, lsz, ltype, ltinfo = loctup
                 funcname = ltinfo
                 logger.debug('0x%x: LOC_IMPORT (emu-taint): 0x%x:  %r', opva, lva, funcname)
+                if not vw.getXrefsFrom(opva):
+                    vw.addXref(opva, lva, v_const.REF_DATA)
 
             else:
                 # instead of a taint (which *should* indicate an IMPORT), we have real pointer.
@@ -429,12 +440,12 @@ def analyzeFunction(vw, funcva):
                     funcname = vw.getName(opval)
 
                 # sort through the location types and adjust accordingly
-                if ltype == vivisect.LOC_IMPORT:
+                if ltype == v_const.LOC_IMPORT:
                     logger.info("0x%x: (0x%x) dest is LOC_IMPORT but missed taint for %r", funcva, opval, funcname)
                     # import locations store the name as ltinfo
                     funcname = ltinfo
 
-                elif ltype == vivisect.LOC_OP:
+                elif ltype == v_const.LOC_OP:
                     logger.debug("0x%x: succeeded finding LOC_OP at the end of the rainbow! (%r)", funcva, funcname)
                     if vw.getFunction(aopval) is None:
                         logger.debug("0x%x: code does not exist at 0x%x.  calling makeFunction()", funcva, aopval)
@@ -442,10 +453,10 @@ def analyzeFunction(vw, funcva):
 
                     # this "thunk" actually calls something in the workspace, that exists as a function...
                     logger.info('0x%x points to real code (0x%x: %r)', funcva, opval, funcname)
-                    vw.addXref(op.va, aopval, vivisect.REF_CODE)
+                    vw.addXref(op.va, aopval, v_const.REF_CODE)
                     vw.setVaSetRow('FuncWrappers', (funcva, opval))
 
-                elif ltype == vivisect.LOC_POINTER:
+                elif ltype == v_const.LOC_POINTER:
                     logger.info("0x%x: (0x%x) dest is LOC_POINTER -> 0x%x", funcva, opval, ltinfo)
                     funcname = ltinfo
 
@@ -474,9 +485,10 @@ def analyzeFunction(vw, funcva):
         funcname = funcname[:-9]
 
     logger.info('makeFunctionThunk(0x%x, "plt_%s")', funcva, funcname)
-    vw.makeFunctionThunk(funcva, "*." + funcname, addVa=False, filelocal=True, 
+    vw.makeFunctionThunk(funcva, "*." + funcname, addVa=False, filelocal=True,
             basename="plt_" + funcname)
 
+# TODO: This belongs somewhere actually discoverable and usable by other people
 '''
 def printPLTs(vw):
     for seg in vw.getSegments():
@@ -518,7 +530,7 @@ linux/ie86/chgrp:
 0x8048dbb:                          e9d0ffffff  jmp 0x08048d90
 .plt.got
 0x80491d0:                        ff25fc3f0508  jmp dword [0x08053ffc]
-0x80491d6:                                6690  nop 
+0x80491d6:                                6690  nop
 0x80491d8:                                0000  add byte [eax],al
 0x80491da:                                0000  add byte [eax],al
 

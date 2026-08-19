@@ -1,12 +1,12 @@
 import binascii
 
 from vstruct import VStruct
-from vstruct.primitives import *
+import vstruct.primitives as vs_prim
 
-class v_bits(v_number):
+class v_bits(vs_prim.v_number):
 
     def __init__(self, width):
-        v_number.__init__(self)
+        vs_prim.v_number.__init__(self)
         self._vs_bitwidth = int(width)
 
     def vsSetValue(self, value):
@@ -17,6 +17,7 @@ class v_bits(v_number):
 
     def vsSetBitWidth(self, width):
         self._vs_bitwidth = width
+
 
 class VBitField(VStruct):
     '''
@@ -47,7 +48,7 @@ class VBitField(VStruct):
 
         indent += 1
         bitoff = 0
-        for fname,field in self.vsGetFields():
+        for fname, field in self.vsGetFields():
             # use vsSetBitWidth(0) to disable fields
             if field._vs_bitwidth == 0:
                 continue
@@ -62,7 +63,7 @@ class VBitField(VStruct):
         return ret
 
     def __len__(self):
-        bits = sum([ f._vs_bitwidth for (n,f) in self.vsGetFields() ])
+        bits = sum([f._vs_bitwidth for (n,f) in self.vsGetFields()])
         bittobyte,bitoff = divmod(bits,8)
         if bitoff:
             bittobyte += 1
@@ -114,12 +115,12 @@ class VBitField(VStruct):
         valu = 0
         width = 0
 
-        for name,field in self.vsGetFields():
-                width += field._vs_bitwidth
-                valu = ( valu << field._vs_bitwidth ) | field._vs_value
-        bytelen,bitrem = divmod(width,8)
+        for name, field in self.vsGetFields():
+            width += field._vs_bitwidth
+            valu = (valu << field._vs_bitwidth) | field._vs_value
+        bytelen,bitrem = divmod(width, 8)
         if bitrem:
             bytelen += 1
-            valu <<= ( 8 - bitrem )
+            valu <<= (8 - bitrem)
 
-        return binascii.unhexlify(('%.' + str(bytelen*2) + 'x') % valu)
+        return binascii.unhexlify(('%.' + str(bytelen * 2) + 'x') % valu)
