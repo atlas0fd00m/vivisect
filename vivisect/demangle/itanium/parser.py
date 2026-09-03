@@ -356,7 +356,8 @@ class ItaniumParser:
                 # BEFORE parsing the template args. This is critical — the
                 # template-prefix must be in the subs table before any types
                 # inside the template args are parsed and added.
-                save_subs_count = len(self.subs)
+                # (matches cxxfilt/libiberty d_prefix behavior: always add
+                # the template-prefix, regardless of first/last position)
                 if len(result) == 1:
                     self._add_substitution(result[0])
                 else:
@@ -365,19 +366,14 @@ class ItaniumParser:
                 targs = self._parse_template_args()
                 result.append(ast.UnqualifiedName('template', targs))
                 # Also add the full template instantiation (prefix + args)
-                # But NOT if this is the last component (function name) —
-                # function names are not substitution candidates.
+                # But NOT if this is the last component (next is E).
+                # When used as a type, _parse_type will add the full
+                # instantiation as a sub after _parse_nested_name returns.
                 if self._peek() != 'E':
                     template_full = ast.NestedName(
                         list(result[:-1]), result[-1]
                     )
                     self._add_substitution(template_full)
-                else:
-                    # Last component: also remove the template-prefix sub
-                    # we added above, since the function name's prefix is
-                    # not a substitution candidate either.
-                    while len(self.subs) > save_subs_count:
-                        self.subs.pop()
 
             if self._peek() == 'E':
                 break
@@ -573,7 +569,10 @@ class ItaniumParser:
                 if self._peek() == 'I':
                     targs = self._parse_template_args()
                     # Wrap in a template instantiation
-                    return ast.NestedName([sub], ast.UnqualifiedName('template', targs))
+                    result = ast.NestedName([sub], ast.UnqualifiedName('template', targs))
+                    # Add as substitution (matches cxxfilt cplus_demangle_type behavior)
+                    self._add_substitution(result)
+                    return result
                 return sub
 
         # Template parameter
@@ -613,7 +612,9 @@ class ItaniumParser:
 
         # Nested name (class/enum type as a qualified name)
         if c == 'N':
-            return self._parse_nested_name()
+            node = self._parse_nested_name()
+            self._add_substitution(node)
+            return node
 
         # Source name as a class-enum-type (unqualified)
         if c.isdigit():
