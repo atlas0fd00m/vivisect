@@ -171,14 +171,31 @@ DTOR_KINDS = {
 # From cp-demangle.c standard_subs[]
 # S_ = first substitution (index 0), S0_ = second (index 1), etc.
 # But St, Sa, Sb, Ss, Si, So, Sd are predefined:
+# Standard substitutions (Itanium ABI §6.3)
+# Sa, Sb are template-template-params (just the name)
+# Ss, Si, So, Sd are full type instantiations
 STD_SUBS = {
     't': 'std',
     'a': 'std::allocator',
     'b': 'std::basic_string',
-    's': 'std::string',
-    'i': 'std::istream',
-    'o': 'std::ostream',
-    'd': 'std::iostream',
+    's': 'std::basic_string<char, std::char_traits<char>, std::allocator<char> >',
+    'i': 'std::basic_istream<char, std::char_traits<char> >',
+    'o': 'std::basic_ostream<char, std::char_traits<char> >',
+    'd': 'std::basic_iostream<char, std::char_traits<char> >',
+}
+
+# Substitutions that are full types (not template-template-parms)
+STD_SUB_FULL_TYPES = {'s', 'i', 'o', 'd'}
+
+# Short names for use as prefix components (e.g., Ss4_Rep... = std::string::... or std::basic_string<...>::...)
+STD_SUB_PREFIX = {
+    't': 'std',
+    'a': 'std::allocator',
+    'b': 'std::basic_string',
+    's': 'std::basic_string<char, std::char_traits<char>, std::allocator<char> >',
+    'i': 'std::basic_istream<char, std::char_traits<char> >',
+    'o': 'std::basic_ostream<char, std::char_traits<char> >',
+    'd': 'std::basic_iostream<char, std::char_traits<char> >',
 }
 
 

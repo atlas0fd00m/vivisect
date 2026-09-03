@@ -293,7 +293,6 @@ class ItaniumParser:
         The template args are stored as a separate UnqualifiedName('template')
         entry, and the renderer combines them with the preceding name."""
         result = []
-        is_first_prefix = True  # Track first prefix (not a substitution candidate)
 
         while True:
             c = self._peek()
@@ -329,13 +328,21 @@ class ItaniumParser:
                         result.append(sub)
                     # Check for template args after substitution
                     if self._peek() == 'I':
+                        # Add template-prefix as sub BEFORE parsing args
+                        # (matches cxxfilt/libiberty behavior)
+                        if len(result) == 1:
+                            self._add_substitution(result[0])
+                        else:
+                            self._add_substitution(ast.NestedName(list(result[:-1]), result[-1]))
                         targs = self._parse_template_args()
                         result.append(ast.UnqualifiedName('template', targs))
-                        # Add the combined substitution+template to subs
-                        combined = ast.NestedName(
-                            list(result[:-1]), result[-1]
-                        )
-                        self._add_substitution(combined)
+                        # Add the full template instantiation as sub
+                        # (but NOT if this is the last component — function name)
+                        if self._peek() != 'E':
+                            template_full = ast.NestedName(
+                                list(result[:-1]), result[-1]
+                            )
+                            self._add_substitution(template_full)
                     continue
                 break
 
@@ -349,13 +356,11 @@ class ItaniumParser:
                 # BEFORE parsing the template args. This is critical — the
                 # template-prefix must be in the subs table before any types
                 # inside the template args are parsed and added.
-                # BUT: the first prefix is NOT a substitution candidate (per ABI).
                 save_subs_count = len(self.subs)
-                if not is_first_prefix:
-                    if len(result) == 1:
-                        self._add_substitution(result[0])
-                    else:
-                        self._add_substitution(ast.NestedName(list(result[:-1]), result[-1]))
+                if len(result) == 1:
+                    self._add_substitution(result[0])
+                else:
+                    self._add_substitution(ast.NestedName(list(result[:-1]), result[-1]))
 
                 targs = self._parse_template_args()
                 result.append(ast.UnqualifiedName('template', targs))
@@ -378,14 +383,11 @@ class ItaniumParser:
                 break
 
             # Add the current prefix chain to substitutions.
-            # BUT: the first prefix is NOT a substitution candidate (per ABI).
-            if not is_first_prefix:
-                if not (result and isinstance(result[-1], ast.UnqualifiedName) and result[-1].kind == 'template'):
-                    if len(result) == 1:
-                        self._add_substitution(result[0])
-                    else:
-                        self._add_substitution(ast.NestedName(list(result[:-1]), result[-1]))
-            is_first_prefix = False
+            if not (result and isinstance(result[-1], ast.UnqualifiedName) and result[-1].kind == 'template'):
+                if len(result) == 1:
+                    self._add_substitution(result[0])
+                else:
+                    self._add_substitution(ast.NestedName(list(result[:-1]), result[-1]))
 
         return result
 
@@ -547,6 +549,13 @@ class ItaniumParser:
                     inner_name = self._parse_source_name()
                     # Check for template args after the name
                     if self._peek() == 'I':
+                        # Add template-prefix (std::name) as sub BEFORE parsing args
+                        # (matches cxxfilt/libiberty behavior)
+                        template_prefix = ast.NestedName(
+                            [ast.SourceName('std'), ast.UnqualifiedName('source', inner_name)],
+                            ast.UnqualifiedName('source', inner_name)
+                        )
+                        self._add_substitution(template_prefix)
                         targs = self._parse_template_args()
                         result = ast.NestedName(
                             [ast.SourceName('std'), ast.UnqualifiedName('source', inner_name)],
@@ -611,6 +620,8 @@ class ItaniumParser:
             name = self._parse_source_name()
             # Check for template args
             if self._peek() == 'I':
+                # Add template-prefix as sub BEFORE parsing args
+                self._add_substitution(name)
                 targs = self._parse_template_args()
                 node = ast.NestedName([name], ast.UnqualifiedName('template', targs))
                 self._add_substitution(node)

@@ -223,21 +223,36 @@ class Renderer:
             return ''
         last = prefix[-1]
         if isinstance(last, ast.SourceName):
-            return last.name
+            return self._extract_class_name(last.name)
         if isinstance(last, ast.UnqualifiedName):
             if last.kind == 'source' and isinstance(last.value, ast.SourceName):
                 return last.value.name
-            # For template classes, use the base name (without args)
+            # For template classes, the class name is the source name
+            # in the prefix element BEFORE the template args.
+            # e.g., prefix = [std, allocator, <template-args>] -> "allocator"
             if last.kind == 'template':
-                # The class name is the source name before the template args
-                # which is the previous prefix element
                 if len(prefix) >= 2:
                     prev = prefix[-2]
                     if isinstance(prev, ast.SourceName):
-                        return prev.name
-                    if isinstance(prev, ast.UnqualifiedName) and isinstance(prev.value, ast.SourceName):
-                        return prev.value.name
+                        return self._extract_class_name(prev.name)
+                    if isinstance(prev, ast.UnqualifiedName):
+                        if isinstance(prev.value, ast.SourceName):
+                            return prev.value.name
+                        # Could be a substitution like Ss/Si/So/Sd
+                        if isinstance(prev.value, ast.Substitution) and prev.value.std_sub:
+                            name = grammar.STD_SUBS.get(prev.value.std_sub, '')
+                            return self._extract_class_name(name)
         return self.render(last)
+
+    def _extract_class_name(self, full_name):
+        """Extract the unqualified class name from a full name string."""
+        # Strip template args (everything from first '<' onwards)
+        if '<' in full_name:
+            full_name = full_name[:full_name.index('<')]
+        # Get last component after ::
+        if '::' in full_name:
+            full_name = full_name.split('::')[-1]
+        return full_name
 
     def _render_OperatorName(self, node):
         return node.symbol
