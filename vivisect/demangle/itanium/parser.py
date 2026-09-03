@@ -277,8 +277,11 @@ class ItaniumParser:
 
         node = ast.NestedName(prefix_chain, unqualified, cv, ref)
 
-        # Add nested name to substitutions
-        self._add_substitution(node)
+        # Note: Do NOT add the full nested name as a substitution here.
+        # The prefix components are already added by _parse_prefix.
+        # The full nested name is only a substitution candidate when it's
+        # a type (class-enum-type), not when it's a function name.
+        # _parse_type() handles adding types to the substitution table.
 
         return node
 
@@ -524,6 +527,24 @@ class ItaniumParser:
         if c == 'S':
             sub = self._parse_substitution(prefix=False)
             if sub is not None:
+                # St followed by a source-name = std::<source-name> (a class-enum type)
+                if isinstance(sub, ast.Substitution) and sub.std_sub == 't' and self._peek().isdigit():
+                    inner_name = self._parse_source_name()
+                    # Check for template args after the name
+                    if self._peek() == 'I':
+                        targs = self._parse_template_args()
+                        result = ast.NestedName(
+                            [ast.SourceName('std'), ast.UnqualifiedName('source', inner_name)],
+                            ast.UnqualifiedName('template', targs)
+                        )
+                        self._add_substitution(result)
+                        return result
+                    result = ast.NestedName(
+                        [ast.SourceName('std')],
+                        ast.UnqualifiedName('source', inner_name)
+                    )
+                    self._add_substitution(result)
+                    return result
                 # Could be followed by template args (template-template-param)
                 if self._peek() == 'I':
                     targs = self._parse_template_args()
@@ -640,7 +661,7 @@ class ItaniumParser:
             ret = self._parse_type()
             types.append(ret)
         # Remaining types are parameters
-        while not self._at_end() and self._peek() != 'E' and self._peek() != 'N':
+        while not self._at_end() and self._peek() != 'E':
             # Check if we've hit something that's clearly not a type
             if not self._looks_like_type() and self._peek() not in grammar.BUILTIN_TYPES:
                 break
@@ -724,7 +745,30 @@ class ItaniumParser:
             type_node = self._parse_type()
             value = self._parse_until_char('E')
             self._expect_char('E')
-            return ast.TemplateArg('primary', '%s%s' % (type_node, value))
+            # Render the type for display
+            type_str = self._render_type_for_literal(type_node)
+            # Handle bool literals: Lb0_E -> false, Lb1_E -> true
+            if type_str == 'bool':
+                if value == '0':
+                    return ast.TemplateArg('primary', 'false')
+                elif value == '1':
+                    return ast.TemplateArg('primary', 'true')
+            # Handle integer literals: Li5E -> 5, Lj10E -> 10u, Lm100E -> 100ul
+            # cxxfmt renders just the value, with suffixes for specific types
+            if type_str in ('int',):
+                return ast.TemplateArg('primary', value)
+            if type_str in ('unsigned int',):
+                return ast.TemplateArg('primary', value + 'u')
+            if type_str in ('long',):
+                return ast.TemplateArg('primary', value + 'l')
+            if type_str in ('unsigned long',):
+                return ast.TemplateArg('primary', value + 'ul')
+            if type_str in ('long long', '__int128',):
+                return ast.TemplateArg('primary', value + 'll')
+            if type_str in ('unsigned long long', 'unsigned __int128',):
+                return ast.TemplateArg('primary', value + 'ull')
+            # For other types, just use the value
+            return ast.TemplateArg('primary', value)
         # Default: it's a type
         type_node = self._parse_type()
         return ast.TemplateArg('type', type_node)
@@ -911,6 +955,16 @@ class ItaniumParser:
                 break
             self.pos += 1
         return self.input[start:self.pos]
+
+    def _render_type_for_literal(self, type_node):
+        """Get the display name of a type for literal rendering."""
+        if isinstance(type_node, ast.BuiltinType):
+            return type_node.name
+        if isinstance(type_node, ast.CVQualifiedType):
+            base = self._render_type_for_literal(type_node.base)
+            return type_node.qualifiers + ' ' + base
+        # For unknown types, try a simple string representation
+        return str(type_node)
 
 
 def parse(mangled):

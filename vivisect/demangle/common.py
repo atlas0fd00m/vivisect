@@ -111,8 +111,9 @@ class DemangledSymbol:
         return {k: getattr(self, k) for k in self.__slots__}
 
 
-# Regex for stripping ELF @@VERSION suffixes (e.g. @@GLIBC_2.4)
-_VERSION_SUFFIX_RE = re.compile(r'@@[A-Za-z0-9_.+-]+$')
+# Regex for stripping ELF @@VERSION or @VERSION suffixes (e.g. @@GLIBC_2.4, @GLIBCXX_3.4)
+# @@ = default version, @ = non-default version (both are version tags)
+_VERSION_SUFFIX_RE = re.compile(r'@@?[A-Za-z0-9_.+-]+$')
 
 
 def normalize_name(name):
@@ -120,8 +121,9 @@ def normalize_name(name):
     Normalize a mangled symbol name by stripping platform-specific suffixes.
 
     Currently handles:
-        - ELF ``@@VERSION`` suffixes (e.g. ``foo@@GLIBC_2.4``) — but only
-          for non-MSVC symbols, since MSVC uses ``@@`` as a scope terminator
+        - ELF ``@@VERSION`` and ``@VERSION`` suffixes (e.g. ``foo@@GLIBC_2.4``,
+          ``foo@GLIBCXX_3.4``) — but only for non-MSVC symbols, since MSVC uses
+          ``@@`` as a scope terminator
         - Trailing NUL bytes
 
     This replaces the ELF-specific ``normName()`` in the old elf.py parser
@@ -129,10 +131,11 @@ def normalize_name(name):
     """
     if not name:
         return name
-    # Strip @@VERSION suffixes (ELF dynamic linker convention).
+    # Strip @@VERSION and @VERSION suffixes (ELF dynamic linker convention).
+    # @@ = default version, @ = non-default version.
     # MSVC mangled symbols start with '?' and use @@ as a scope terminator,
     # so don't strip those.  Use the regex to only strip if the content after
-    # @@ looks like a version string (not just any @@).
+    # @ looks like a version string (not just any @).
     if not name.startswith('?'):
         name = _VERSION_SUFFIX_RE.sub('', name)
     # Strip trailing NUL

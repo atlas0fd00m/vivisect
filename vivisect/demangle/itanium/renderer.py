@@ -84,16 +84,45 @@ class Renderer:
         is_template = self._is_template_name(node.qualified_name)
 
         if is_template and len(types) > 1:
+            return_type = self.render(types[0])
             params = types[1:]  # skip return type
         else:
+            return_type = None
             params = types  # all are parameters
 
         param_strs = [self.render(t) for t in params]
         # Per cxxfilt convention: a single 'void' param = empty param list
         if len(param_strs) == 1 and param_strs[0] == 'void':
             param_strs = []
-        return '%s(%s)' % (name_str, ', '.join(param_strs))
 
+        # For member functions, CV-qualifiers and ref-qualifiers go AFTER
+        # the parameter list, not after the name.  But _render_NestedName
+        # already appended them to name_str.  We need to strip them from
+        # name_str and re-append after the params.
+        cv_suffix = ''
+        qn = node.qualified_name
+        if isinstance(qn, ast.NestedName):
+            if qn.cv_qualifiers:
+                cv_suffix = ' ' + qn.cv_qualifiers
+                # Strip the cv_qualifiers that _render_NestedName appended
+                name_str = name_str[:-len(cv_suffix)]
+            if qn.ref_qualifier:
+                ref_suffix = ' ' + qn.ref_qualifier
+                # ref_qualifier may have been appended after cv
+                if name_str.endswith(ref_suffix):
+                    name_str = name_str[:-len(ref_suffix)]
+                    cv_suffix += ref_suffix
+                elif name_str.endswith(qn.ref_qualifier):
+                    name_str = name_str[:-len(qn.ref_qualifier)]
+                    cv_suffix += ' ' + qn.ref_qualifier
+
+        result = '%s(%s)' % (name_str, ', '.join(param_strs))
+        if cv_suffix:
+            result += cv_suffix
+        # For template specializations, prepend the return type
+        if return_type is not None:
+            result = '%s %s' % (return_type, result)
+        return result
     def _is_template_name(self, node):
         """Check if a name node is a template instantiation."""
         if isinstance(node, ast.NestedName):
@@ -114,7 +143,13 @@ class Renderer:
         if node.kind == 'source':
             return self.render(node.value)
         if node.kind == 'operator':
-            return 'operator%s' % node.value.symbol
+            sym = node.value.symbol
+            # cxxfilt convention: alphabetic operator names get a space
+            # (operator new, operator delete, operator cast), symbolic ones don't
+            # (operator+, operator-, operator<<)
+            if sym and sym[0].isalpha():
+                return 'operator %s' % sym
+            return 'operator%s' % sym
         if node.kind == 'ctor':
             return self._render_ctor_dtor(node.value, is_destructor=False)
         if node.kind == 'dtor':
@@ -237,11 +272,36 @@ class Renderer:
         return node.name
 
     def _render_PointerType(self, node):
-        target = self.render(node.target)
-        # Pointer to function: special formatting
-        if isinstance(node.target, ast.FunctionType) or self._is_function_pointer(node.target):
-            return '%s (*)' % self._render_function_pointer_inner(node.target)
-        return '%s*' % target
+        target = node.target
+        # Pointer to function: special formatting (ret (*)(params))
+        if isinstance(target, ast.FunctionType):
+            bare = target.bare_function
+            if bare is None or not bare.types:
+                return 'void (*)()'
+            ret = self.render(bare.types[0])
+            params = [self.render(t) for t in bare.types[1:]]
+            if len(params) == 1 and params[0] == 'void':
+                params = []
+            result = '%s (*)(%s)' % (ret, ', '.join(params))
+            if target.cv:
+                result += ' ' + target.cv
+            if target.ref:
+                result += ' ' + target.ref
+            return result
+        # Check for CV-qualified function type (e.g., const function pointer)
+        if isinstance(target, ast.CVQualifiedType) and isinstance(target.base, ast.FunctionType):
+            inner = target.base
+            bare = inner.bare_function
+            if bare is None or not bare.types:
+                ret_str = 'void (*)()'
+            else:
+                ret = self.render(bare.types[0])
+                params = [self.render(t) for t in bare.types[1:]]
+                if len(params) == 1 and params[0] == 'void':
+                    params = []
+                ret_str = '%s (*)(%s)' % (ret, ', '.join(params))
+            return ret_str
+        return '%s*' % self.render(target)
 
     def _is_function_pointer(self, node):
         """Check if a node represents a function (for pointer formatting)."""
