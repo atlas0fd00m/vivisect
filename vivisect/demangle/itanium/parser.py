@@ -218,7 +218,30 @@ class ItaniumParser:
                         )
                         self._add_substitution(result)
                         return result
+                    # St followed by an operator = std::operatorX
+                    if node.std_sub == 't' and (self._peek() + self._peek(1)) in grammar.OPERATORS:
+                        op = self._parse_unqualified_name()
+                        # Check for template args after operator
+                        if self._peek() == 'I':
+                            targs = self._parse_template_args()
+                            result = ast.NestedName(
+                                [ast.SourceName('std'), op],
+                                ast.UnqualifiedName('template', targs)
+                            )
+                            self._add_substitution(result)
+                            return result
+                        result = ast.NestedName(
+                            [ast.SourceName('std')],
+                            op
+                        )
+                        self._add_substitution(result)
+                        return result
                     # Other std subs (Sa, Sb, Ss, Si, So, Sd) are complete names
+                    # Check for template args (template-template-param)
+                    if self._peek() == 'I':
+                        targs = self._parse_template_args()
+                        result = ast.NestedName([node], ast.UnqualifiedName('template', targs))
+                        return result
                     return node
                 # Check for template args after a substitution
                 if self._peek() == 'I':
