@@ -330,10 +330,16 @@ class ItaniumParser:
                     if self._peek() == 'I':
                         # Add template-prefix as sub BEFORE parsing args
                         # (matches cxxfilt/libiberty behavior)
-                        if len(result) == 1:
-                            self._add_substitution(result[0])
-                        else:
-                            self._add_substitution(ast.NestedName(list(result[:-1]), result[-1]))
+                        # BUT: for predefined subs (Sa, Sb, Ss, Si, So, Sd),
+                        # cxxfilt's d_prefix does 'continue' after
+                        # d_substitution, skipping the sub addition. The
+                        # template-prefix is NOT added — only the full
+                        # instantiation after template args.
+                        if not sub.std_sub or sub.std_sub == 't':
+                            if len(result) == 1:
+                                self._add_substitution(result[0])
+                            else:
+                                self._add_substitution(ast.NestedName(list(result[:-1]), result[-1]))
                         targs = self._parse_template_args()
                         result.append(ast.UnqualifiedName('template', targs))
                         # Add the full template instantiation as sub
@@ -548,7 +554,7 @@ class ItaniumParser:
                         # Add template-prefix (std::name) as sub BEFORE parsing args
                         # (matches cxxfilt/libiberty behavior)
                         template_prefix = ast.NestedName(
-                            [ast.SourceName('std'), ast.UnqualifiedName('source', inner_name)],
+                            [ast.SourceName('std')],
                             ast.UnqualifiedName('source', inner_name)
                         )
                         self._add_substitution(template_prefix)
@@ -570,7 +576,8 @@ class ItaniumParser:
                     targs = self._parse_template_args()
                     # Wrap in a template instantiation
                     result = ast.NestedName([sub], ast.UnqualifiedName('template', targs))
-                    # Add as substitution (matches cxxfilt cplus_demangle_type behavior)
+                    # Add as substitution. Even for predefined subs (Sa, Sb),
+                    # the full instantiation is added (binutils 2.42 behavior).
                     self._add_substitution(result)
                     return result
                 return sub
