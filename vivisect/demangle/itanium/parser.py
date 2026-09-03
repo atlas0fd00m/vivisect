@@ -293,6 +293,7 @@ class ItaniumParser:
         The template args are stored as a separate UnqualifiedName('template')
         entry, and the renderer combines them with the preceding name."""
         result = []
+        is_first_prefix = True  # Track first prefix (not a substitution candidate)
 
         while True:
             c = self._peek()
@@ -344,33 +345,47 @@ class ItaniumParser:
 
             # Check for template args
             if self._peek() == 'I':
-                targs = self._parse_template_args()
-                # The template-prefix (name without args) is a substitution candidate.
-                # result currently has the name components without the template args.
-                # Add it as a substitution before adding the template args.
-                if len(result) == 1:
-                    self._add_substitution(result[0])
-                else:
-                    self._add_substitution(ast.NestedName(list(result[:-1]), result[-1]))
+                # Add the template-prefix (name without args) as a substitution
+                # BEFORE parsing the template args. This is critical — the
+                # template-prefix must be in the subs table before any types
+                # inside the template args are parsed and added.
+                # BUT: the first prefix is NOT a substitution candidate (per ABI).
+                save_subs_count = len(self.subs)
+                if not is_first_prefix:
+                    if len(result) == 1:
+                        self._add_substitution(result[0])
+                    else:
+                        self._add_substitution(ast.NestedName(list(result[:-1]), result[-1]))
 
+                targs = self._parse_template_args()
                 result.append(ast.UnqualifiedName('template', targs))
                 # Also add the full template instantiation (prefix + args)
-                template_full = ast.NestedName(
-                    list(result[:-1]), result[-1]
-                )
-                self._add_substitution(template_full)
+                # But NOT if this is the last component (function name) —
+                # function names are not substitution candidates.
+                if self._peek() != 'E':
+                    template_full = ast.NestedName(
+                        list(result[:-1]), result[-1]
+                    )
+                    self._add_substitution(template_full)
+                else:
+                    # Last component: also remove the template-prefix sub
+                    # we added above, since the function name's prefix is
+                    # not a substitution candidate either.
+                    while len(self.subs) > save_subs_count:
+                        self.subs.pop()
 
             if self._peek() == 'E':
                 break
 
             # Add the current prefix chain to substitutions.
-            # For the first component (result has 1 element), add it directly.
-            # For longer chains, add as a NestedName.
-            if not (result and isinstance(result[-1], ast.UnqualifiedName) and result[-1].kind == 'template'):
-                if len(result) == 1:
-                    self._add_substitution(result[0])
-                else:
-                    self._add_substitution(ast.NestedName(list(result[:-1]), result[-1]))
+            # BUT: the first prefix is NOT a substitution candidate (per ABI).
+            if not is_first_prefix:
+                if not (result and isinstance(result[-1], ast.UnqualifiedName) and result[-1].kind == 'template'):
+                    if len(result) == 1:
+                        self._add_substitution(result[0])
+                    else:
+                        self._add_substitution(ast.NestedName(list(result[:-1]), result[-1]))
+            is_first_prefix = False
 
         return result
 
