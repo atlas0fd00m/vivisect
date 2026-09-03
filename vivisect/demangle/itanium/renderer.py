@@ -141,7 +141,11 @@ class Renderer:
 
     def _render_UnqualifiedName(self, node):
         if node.kind == 'source':
-            return self.render(node.value)
+            result = self.render(node.value)
+            # Append ABI tags
+            if node.abi_tags:
+                result += ''.join('[abi:%s]' % t for t in node.abi_tags)
+            return result
         if node.kind == 'operator':
             sym = node.value.symbol
             # cxxfilt convention: alphabetic operator names get a space
