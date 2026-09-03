@@ -50,7 +50,7 @@ def demangle_itanium(mangled, structured=False):
     try:
         parser = ItaniumParser(mangled)
         ast_root = parser.parse()
-        demangled = render(ast_root, subs=parser.subs)
+        demangled = render(ast_root, subs=parser.subs, template_params=parser.template_subs)
         parse_warnings = parser.warnings
     except ParseError as e:
         logger.debug('pure-Python Itanium parser failed for %r: %r', mangled, e)

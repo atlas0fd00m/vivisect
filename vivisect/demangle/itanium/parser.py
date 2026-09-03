@@ -771,6 +771,8 @@ class ItaniumParser:
             args.append(arg)
         self._expect_char('E')
         node = ast.TemplateArgs(args)
+        # Store template args for T_ resolution
+        self.template_subs = [a.value if isinstance(a, ast.TemplateArg) else a for a in args]
         # NOTE: Template args themselves are NOT added to the substitution
         # table.  The template-prefix (name before the args) is the
         # substitution candidate, not the args.

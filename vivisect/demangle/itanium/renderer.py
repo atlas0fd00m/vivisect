@@ -40,7 +40,7 @@ class Renderer:
 
     def __init__(self, subs=None, template_params=None):
         self.subs = subs if subs is not None else []
-        self.template_params = template_params if template_params is not None else {}
+        self.template_params = template_params if template_params is not None else []
         self._in_template_args = False
 
     def render(self, node):
@@ -373,6 +373,10 @@ class Renderer:
         return '/*sub%d*/' % node.index if node.index is not None else '/*sub*/'
 
     def _render_TemplateParam(self, node):
+        # Resolve template parameter from the template_params list
+        if self.template_params and node.index < len(self.template_params):
+            target = self.template_params[node.index]
+            return self.render(target)
         return '/*T%d*/' % node.index
 
     def _render_SpecialName(self, node):
