@@ -763,7 +763,8 @@ class VivWorkspaceCore(viv_impapi.ImportApi):
 
         for arch in ppc_archs:
             arch_idx = arch >> 16
-            self.imem_archs[arch_idx].setVleMaps(maps)
+            if arch_idx in self.imem_archs:
+                self.imem_archs[arch_idx].setVleMaps(maps)
 
     def _fmcb_Thunk(self, funcva, th, thunkname):
         # If the function being made a thunk is registered

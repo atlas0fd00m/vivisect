@@ -1,13 +1,8 @@
-import sys
-
-import envi
 import envi.bits as e_bits
 import envi.archs.ppc as e_ppc
-import envi.registers as e_registers
 
 import vivisect.symboliks.analysis as vsym_analysis
 import vivisect.symboliks.callconv as vsym_callconv
-import vivisect.symboliks.emulator as vsym_emulator
 import vivisect.symboliks.translator as vsym_trans
 
 from envi.archs.ppc.const import *
@@ -500,48 +495,10 @@ class PpcSymbolikTranslator(vsym_trans.SymbolikTranslator):
             return None
 
     # target is BD (first operand)
-
-    def i_bdz(self, op, lk=False):
-        tgt = self.getOperValue(op, 0)
-        ctr = self.getRegObj(REG_CTR)
-        ctr = ctr - Const(1,1)
-        cond = ctr == Const(0,0)
-        return self._cond_jmp(op, cond=cond, tgtsym=tgt, lk=lk)
-
-    def i_bdzl(self, op):
-        return self.i_bdz(op, True)
-
-    def i_bdnz(self, op, lk=False):
-        tgt = self.getOperValue(op, 0)
-        ctr = self.getRegObj(REG_CTR)
-        ctr = ctr - Const(1,1)
-        cond = ctr != Const(0,0)
-        return self._cond_jmp(op, cond=cond, tgtsym=tgt, lk=lk)
-
-    def i_bdnzl(self, op):
-        return self.i_bdnz(op, lk)
+    # NOTE: i_bdz, i_bdnz, i_bdzl, i_bdnzl, i_bdzlr, i_bdnzlr, i_bdzlrl, i_bdnzlrl
+    # are defined later in this class with full implementations using getOperObj/setRegObj.
 
     ## target is LR
-
-    def i_bdzlr(self, op, lk=False):
-        tgt = self.getRegObj(REG_LR)
-        ctr = self.getRegObj(REG_CTR)
-        ctr = ctr - Const(1,1)
-        cond = ctr == Const(0,0)
-        return self._cond_jmp(op, cond=cond, tgtsym=tgt, lk=lk)
-
-    def i_bdzlrl(self, op):
-        return self.i_bdzlr(op, True)
-
-    def i_bdnzlr(self, op):
-        tgt = self.getRegObj(REG_LR)
-        ctr = self.getRegObj(REG_CTR)
-        ctr = ctr - Const(1,1)
-        cond = ctr != Const(0,0)
-        return self._cond_jmp(op, cond=cond, tgtsym=tgt, lk=lk)
-
-    def i_bdnzlrl(self, op):
-        return self.i_bdnzlr(op, True)
 
     ####### CTR decrementing and CR condition branches #######
     # There are no bcctr instructions of this form because CTR cannot be the

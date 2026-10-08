@@ -11,7 +11,7 @@ special thanks to wargio and ehntoo for their hard work
 adapted by atlas <atlas@r4780y.com>, bugfixes and unit tests by @sprout42.
 '''
 
-from typing import Dict, Tuple, Callable, Optional, List
+from typing import Dict, Callable, List
 from .vle_ops import *
 from .regs import *
 import envi
@@ -314,7 +314,7 @@ def case_E_XLSP(types, data, va):
     return opers
 
 def case_E_NONE(types, data, va):
-    opers = tuple()
+    opers = ()
     return opers
 
 
@@ -399,7 +399,7 @@ def simpleE_ORI(ival, mnem, opcode, opers, iflags):
             iflags == IFLAGS_NONE:
 
         if opers[0].reg == 0 and opers[1].reg == 0:
-            return 'e_nop', INS_NOP, tuple(), iflags
+            return 'e_nop', INS_NOP, (), iflags
 
         elif opers[2].isImmed() and opers[2].val == 0:
             return 'e_mr', INS_MR, opers[:2], iflags

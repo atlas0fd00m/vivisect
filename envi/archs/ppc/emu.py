@@ -1,16 +1,11 @@
 # -*- coding: iso-8859-15 -*-
 
-import sys
-
 import envi
 import envi.bits as e_bits
-import envi.memory as e_mem
-import envi.common as e_common
 
 import math
 import operator
 import struct
-import math
 
 from envi import *
 from .regs import *
@@ -2414,16 +2409,6 @@ class PpcAbstractEmulator(envi.Emulator):
         if op.iflags & IF_RC: self.setFlags(result)
         self.setOperValue(op, 0, result)
 
-    def i_not(self, op):
-        '''
-        simplified form of nor
-        '''
-        src1 = self.getOperValue(op, 1)
-        result = COMPLEMENT(src1, self.psize)
-
-        if op.iflags & IF_RC: self.setFlags(result)
-        self.setOperValue(op, 0, result)
-
     def i_nor(self, op):
         src1 = self.getOperValue(op, 1)
         src2 = self.getOperValue(op, 2)
@@ -3256,10 +3241,6 @@ class PpcAbstractEmulator(envi.Emulator):
         value = (cr & ~mask) | (rS & mask)
 
         self.setRegister(REG_CR, value)
-
-    def i_mfcr(self, op):
-        cr = self.getRegister(REG_CR)
-        self.setOperValue(op, cr)
 
     def i_mtocrf(self, op):
         # The operand order is reversed from mtcrf, but otherwise it's the same.
@@ -5184,7 +5165,7 @@ class PpcAbstractEmulator(envi.Emulator):
     i_lvexhx = lvex
     i_lvexwx = lvex
 
-    lvs_bytes = bytes([x for x in range(0, 0x20)])
+    lvs_bytes = bytes(range(0, 0x20))
 
     def i_lvsl(self, op):
         offset = self.getOperAddr(op, 1) & 0xf

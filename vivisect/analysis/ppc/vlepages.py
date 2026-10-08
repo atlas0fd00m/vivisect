@@ -11,8 +11,7 @@
 import logging
 logger = logging.getLogger(__name__)
 
-import vivisect.exc as viv_exc
-import vivisect.const as viv_const
+
 
 
 # Default memory maps as defined by the boot assist module (BAM).
@@ -53,10 +52,10 @@ def analyze(vw):
                     base, size = entry[:2]
                     vle = bool(entry[2])
                 else:
-                    logger.error('Invalid format for PPC VLE page %d: %r', entry)
+                    logger.error('Invalid format for PPC VLE page %d: %r', idx, entry)
                     continue
 
-                logger.debug('Adding initial PPC VLE pages %d: 0x%x - 0x%x (%s)', base, base+size, vle)
+                logger.debug('Adding initial PPC VLE page %d: 0x%x - 0x%x (%s)', idx, base, base+size, vle)
                 maps[idx] = [base, size, vle]
             vw.setMeta('PpcVlePages', maps)
         else:
