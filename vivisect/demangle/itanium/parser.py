@@ -736,10 +736,16 @@ class ItaniumParser:
     def _parse_bare_function_type(self, has_return=False):
         """<bare-function-type> ::= <type>+"""
         types = []
+        # Save the template_subs so that types inside the parameter list
+        # (which may have their own template args) don't overwrite the
+        # function's template parameters needed for T_ resolution.
+        saved_template_subs = self.template_subs
         if has_return:
             # First type is the return type
             ret = self._parse_type()
             types.append(ret)
+            # Restore template_subs after return type parse
+            self.template_subs = saved_template_subs
         # Remaining types are parameters
         while not self._at_end() and self._peek() != 'E':
             # Check if we've hit something that's clearly not a type
@@ -750,6 +756,9 @@ class ItaniumParser:
             try:
                 t = self._parse_type()
                 types.append(t)
+                # Restore template_subs after each type, since the type's
+                # inner template args may have overwritten the function's
+                self.template_subs = saved_template_subs
             except ParseError:
                 # Restore position so caller can see what stopped us
                 self.pos = saved_pos

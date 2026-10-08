@@ -160,11 +160,16 @@ class Renderer:
         return False
 
     def _is_operator_part(self, prefix, template_idx):
-        """Check if the element before template_idx is an operator name."""
+        """Check if the element before template_idx is an operator name
+        that needs a space before template args (to avoid <<< or >>>)."""
         if template_idx > 0:
             prev = prefix[template_idx - 1]
             if isinstance(prev, ast.UnqualifiedName) and prev.kind == 'operator':
-                return True
+                op = prev.value
+                # cxxfilt only adds a space for << operator
+                # to avoid <<< ambiguity. >> does NOT get a space.
+                if op.code == 'ls':
+                    return True
         return False
 
     def _render_SourceName(self, node):
@@ -245,9 +250,12 @@ class Renderer:
                     else:
                         parts[-1] += self.render(unq)
                 else:
-                    # Check if last prefix element is an operator (needs space)
+                    # Check if last prefix element is an operator (needs space
+                    # only for << and >> to avoid <<< and >>>)
                     last_prefix = prefix[-1] if prefix else None
-                    if isinstance(last_prefix, ast.UnqualifiedName) and last_prefix.kind == 'operator':
+                    if (isinstance(last_prefix, ast.UnqualifiedName) and
+                        last_prefix.kind == 'operator' and
+                        last_prefix.value.code == 'ls'):
                         parts[-1] += ' ' + self.render(unq)
                     else:
                         parts[-1] += self.render(unq)
