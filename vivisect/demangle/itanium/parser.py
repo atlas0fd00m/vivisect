@@ -616,7 +616,14 @@ class ItaniumParser:
 
         # Template parameter
         if c == 'T':
-            return self._parse_template_param()
+            node = self._parse_template_param()
+            # cxxfilt adds the resolved template parameter type as a
+            # substitution candidate when it's used in a type context.
+            # T_ resolves to template_subs[index].
+            if node.index < len(self.template_subs):
+                resolved = self.template_subs[node.index]
+                self._add_substitution(resolved)
+            return node
 
         # Builtin type (single char or D* extended)
         if c in grammar.BUILTIN_TYPES:
