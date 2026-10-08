@@ -1,12 +1,10 @@
 import os
 import unittest
 import vivisect
-import envi.archs.ppc
 import envi.exc as e_exc
 import envi.const as e_const
 import envi.common as e_common
 import envi.expression as e_exp
-import envi.archs.ppc.vle as eapvd
 import envi.archs.ppc.emu as eape
 import envi.archs.ppc.const as eapc
 import vivisect.symboliks.analysis as vs_anal
@@ -105,7 +103,7 @@ class PpcInstructionSet(unittest.TestCase):
 
                 else:
                     op = emu.archParseOpcode(unhexlify(opbytes), 0, va=va)
-                    raise Exception( "Funkt up Setting: (%r: %r test#%d)  %s = 0x%x" % (opbytes, op, tidx, tgt, val) )
+                    raise Exception( "Funkt up Setting: (%r: %r test#%d)  %s = 0x%x" % (opbytes, op, tidx, tgt, val) ) from None
 
         op = emu.archParseOpcode(unhexlify(opbytes), 0, va=va)
         logger.debug("0x%x:  %r",op.va, op)
@@ -165,7 +163,7 @@ class PpcInstructionSet(unittest.TestCase):
                     else:
                         failure_msg.append('%s  !=  %s (observed: %s) (mem)' % (_strify(tgt), _strify(val), _strify(testval)))
                 else:
-                    raise Exception( "Funkt up test (%r test#%d) : %s == %s" % (op, tidx, tgt, val) )
+                    raise Exception( "Funkt up test (%r test#%d) : %s == %s" % (op, tidx, tgt, val) ) from None
 
         if failure_msg:
             msg = '\n\t'.join(failure_msg)
@@ -303,9 +301,9 @@ class PpcInstructionSet(unittest.TestCase):
     def test_missing_instruction_tests(self):
         # For informational/debugging purposes, print out which instructions
         # have not been tested
-        all_instrs = dict((n, getattr(eapc, n)) for n in dir(eapc) if n.startswith('INS_'))
+        all_instrs = {n: getattr(eapc, n) for n in dir(eapc) if n.startswith('INS_')}
         all_tested_instrs = set().union(*[s for s in self.tested_instrs.values()])
-        untested_instrs = dict((k, v) for k, v in all_instrs.items() if v not in all_tested_instrs)
+        untested_instrs = {k: v for k, v in all_instrs.items() if v not in all_tested_instrs}
 
         if untested_instrs:
             logger.warning('%d out of %d instructions tested', len(all_tested_instrs), len(all_instrs))

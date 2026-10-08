@@ -1,8 +1,7 @@
 import envi
 import envi.bits as e_bits
-import envi.symstore.resolver as e_resolv
 
-from envi import IF_NOFALL, IF_BRANCH, IF_CALL, IF_RET, IF_PRIV, IF_COND
+from envi import IF_BRANCH, IF_CALL, IF_COND
 
 import struct
 

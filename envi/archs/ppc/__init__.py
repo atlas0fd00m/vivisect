@@ -4,11 +4,7 @@ import envi
 import envi.bits as e_bits
 import envi.const as e_const
 
-import copy
-import struct
-import traceback
-
-import envi.archs.ppc.regs as eapr
+import envi.archs.ppc.regs as eapr  # noqa: F401  # re-exported for from envi.archs.ppc import *
 import envi.archs.ppc.disasm as eapd
 from . import vle
 
@@ -81,7 +77,7 @@ class Ppc64EmbeddedModule(envi.ArchitectureModule):
         envi.ArchitectureModule.__init__(self, archname, endian=endian)
         self.mode = mode
         self.psize = mode//8
-        self.maps = tuple()
+        self.maps = ()
         if self.psize == 8:
             self._arch_dis = eapd.Ppc64EmbeddedDisasm()
         else:
@@ -314,7 +310,7 @@ class Ppc64ServerModule(Ppc64EmbeddedModule):
 
 class Ppc32ServerModule(Ppc64ServerModule):
     def __init__(self, mode=32, archname='ppc32-server'):
-        Ppc64EmbeddedModule.__init__(self, mode=mode, archname=archname)
+        Ppc64ServerModule.__init__(self, mode=mode, archname=archname)
 
     def getEmulator(self):
         emu = Ppc32ServerEmulator()

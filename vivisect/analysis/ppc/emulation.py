@@ -1,14 +1,6 @@
-import sys
-import bisect
-import operator
-
-import vivisect
 import vivisect.exc as viv_exc
-import vivisect.const as viv_const
-import vivisect.impemu as viv_imp
 import vivisect.impemu.monitor as viv_monitor
 
-import envi
 import envi.archs.ppc as e_ppc
 
 from vivisect.const import *
@@ -93,7 +85,7 @@ class PpcAnalysisMonitor(viv_monitor.AnalysisMonitor):
 
         elif op.mnem == 'mtspr' and op.opers[0].reg != e_ppc.REG_LR:
             sprname = op.opers[0].repr(op)
-            value = emu.getOperValue(op, 0)
+            value = emu.getOperValue(op, 1)
             self.spr_writes.append((op.va, sprname, value))
 
         elif op.mnem == 'tlbwe':

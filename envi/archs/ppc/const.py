@@ -134,7 +134,8 @@ OEMODE_ADDSUBNEG = 1
 OEMODE_MULDIV = 2
 
 # special instruction aliases:
-INS_VMR = inscounter ; inscounter += 1
+INS_VMR = inscounter
+inscounter += 1
 
 # Constants used for checking ESR values
 ESR_PIL_MASK    = 0x08000000

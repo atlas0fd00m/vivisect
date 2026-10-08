@@ -49,7 +49,7 @@ class PpcDisasm:
 
                 if val in self._instr_dict[key][mask]:
                     entry = self._instr_dict[key][mask][val]
-                    errmsg = 'Duplicate instruction decoding %#x, %#x: prev = %s, new = %s' % (mask, val, entry[0], data[0])
+                    errmsg = 'Duplicate instruction decoding %#x, %#x: prev = %s, new = %s' % (mask, val, entry[0], instr_dict[key][i][2][0])
                     raise Exception(errmsg)
                 else:
                     self._instr_dict[key][mask][val] = instr_dict[key][i][2]
@@ -197,7 +197,7 @@ def simpleOR(ival, mnem, opcode, opers, iflags):
 
 def simpleORI(ival, mnem, opcode, opers, iflags):
     if ival == 0x60000000:
-        return 'nop', INS_NOP, tuple(), iflags
+        return 'nop', INS_NOP, (), iflags
 
     if opers[2].val == 0:
         mnem = mr_mnems[bool(iflags & IF_RC)]

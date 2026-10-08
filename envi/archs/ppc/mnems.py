@@ -12061,7 +12061,7 @@ def buildOutput():
     # FORMS
     form_names = []
     formcounter = 0
-    keys = [form for form in FORM_CONST.values() ]
+    keys = list(FORM_CONST.values())
     keys.append('FORM_X_2') # used for VLE decoding (per Mitch)
     keys.sort()
 
@@ -12103,7 +12103,7 @@ def buildOutput():
 
     # Turn this list into a set, and then back again so we can sort the list
     # alphabetically before outputting to the const_gen.py output buffer.
-    mnem_array = sorted(list(set(mnem_array )))
+    mnem_array = sorted(set(mnem_array))
     mnem_out_list = ['    %r,' % m for m in mnem_array]
     out.extend(mnem_out_list)
 

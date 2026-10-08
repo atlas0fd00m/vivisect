@@ -80,7 +80,7 @@ class PpcInstructionSetByCategories(unittest.TestCase):
                     emu.writeMemValue(tgt, val, 1) # limited to 1-byte writes currently
 
                 else:
-                    raise Exception( "Funkt up Setting: (%r test#%d)  %s = 0x%x" % (op, tidx, tgt, val) )
+                    raise Exception( "Funkt up Setting: (%r test#%d)  %s = 0x%x" % (op, tidx, tgt, val) ) from None
 
         emu.executeOpcode(op)
 
@@ -107,7 +107,7 @@ class PpcInstructionSetByCategories(unittest.TestCase):
                     if testval == val:
                         success = True
                     else:
-                        raise Exception("FAILED(raw_reg): (%r test#%d)  %s  !=  0x%x (observed: 0x%x) \n\t(setters: %r)\n\t(test: %r)" % (op, tidx, tgt, val, testval, settersrepr, testsrepr))
+                        raise Exception("FAILED(raw_reg): (%r test#%d)  %s  !=  0x%x (observed: 0x%x) \n\t(setters: %r)\n\t(test: %r)" % (op, tidx, tgt, val, testval, settersrepr, testsrepr)) from None
 
                 elif type(tgt) in (long, int):
                     # it's an address
@@ -115,7 +115,7 @@ class PpcInstructionSetByCategories(unittest.TestCase):
                     if testval == val:
                         success = True
                     else:
-                        raise Exception("FAILED(mem): (%r test#%d)  0x%x  !=  0x%x (observed: 0x%x) \n\t(setters: %r)\n\t(test: %r)" % (op, tidx, tgt, val, testval, settersrepr, testsrepr))
+                        raise Exception("FAILED(mem): (%r test#%d)  0x%x  !=  0x%x (observed: 0x%x) \n\t(setters: %r)\n\t(test: %r)" % (op, tidx, tgt, val, testval, settersrepr, testsrepr)) from None
 
                 elif type(tgt) == tuple:
                     # it's an address:size tuple (size must be 1, 2, 4, or 8)
@@ -124,10 +124,10 @@ class PpcInstructionSetByCategories(unittest.TestCase):
                     if testval == val:
                         success = True
                     else:
-                        raise Exception("FAILED(mem): (%r test#%d)  0x%x  !=  0x%x (observed: 0x%x) \n\t(setters: %r)\n\t(test: %r)" % (op, tidx, tgt, val, testval, settersrepr, testsrepr))
+                        raise Exception("FAILED(mem): (%r test#%d)  0x%x  !=  0x%x (observed: 0x%x) \n\t(setters: %r)\n\t(test: %r)" % (op, tidx, tgt, val, testval, settersrepr, testsrepr)) from None
 
                 else:
-                    raise Exception( "Funkt up test (%r test#%d) : %s == %s" % (op, tidx, tgt, val) )
+                    raise Exception( "Funkt up test (%r test#%d) : %s == %s" % (op, tidx, tgt, val) ) from None
 
         return success
 

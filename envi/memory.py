@@ -591,9 +591,12 @@ class MemoryObject(IMemory):
         with mem.getAdminRights():
             mem.writeMemory(addr, data)
         '''
+        oldrights = self._supervisor
         self._supervisor = True
-        yield
-        self._supervisor = False
+        try:
+            yield
+        finally:
+            self._supervisor = oldrights
 
     def readMemory(self, va, size, _origva=None):
         '''
