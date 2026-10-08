@@ -218,20 +218,21 @@ class WorkspaceEmulator:
             self.hooks[impname] = val
 
         # Set the stack configuration for this emulator
+        psize = self.vw.psize
 
         self.stack_map_mask = _priority_get_args(
             kwargs.get('stackMask'),
-            vw.config.viv.analysis.stack.cfginfo.get('mask'),
-            e_bits.sign_extend(0xfff00000, 4, self.vw.psize))
+            e_bits.sign_extend(vw.config.viv.analysis.stack.cfginfo.get('mask'), 4, psize) if vw.config.viv.analysis.stack.cfginfo.get('mask') is not None else None,
+            e_bits.sign_extend(0xfff00000, 4, psize))
 
         self.stack_map_base = _priority_get_args(
             kwargs.get('stackBase'),
-            vw.config.viv.analysis.stack.cfginfo.get('base'),
-            e_bits.sign_extend(0xbfb00000, 4, self.vw.psize))
+            e_bits.sign_extend(vw.config.viv.analysis.stack.cfginfo.get('base'), 4, psize) if vw.config.viv.analysis.stack.cfginfo.get('base') is not None else None,
+            e_bits.sign_extend(0xbfb00000, 4, psize))
 
         self.stack_map_top = _priority_get_args(
             kwargs.get('stackMapTop'),
-            vw.config.viv.analysis.stack.cfginfo.get('top'),
+            e_bits.sign_extend(vw.config.viv.analysis.stack.cfginfo.get('top'), 4, psize) if vw.config.viv.analysis.stack.cfginfo.get('top') is not None else None,
             self.stack_map_base + init_stack_size)
 
         self.stack_pointer = _priority_get_args(
