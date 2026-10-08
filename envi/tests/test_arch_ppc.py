@@ -302,7 +302,7 @@ class PpcInstructionSet(unittest.TestCase):
         # For informational/debugging purposes, print out which instructions
         # have not been tested
         all_instrs = {n: getattr(eapc, n) for n in dir(eapc) if n.startswith('INS_')}
-        all_tested_instrs = set().union(*[s for s in self.tested_instrs.values()])
+        all_tested_instrs = set().union(*self.tested_instrs.values())
         untested_instrs = {k: v for k, v in all_instrs.items() if v not in all_tested_instrs}
 
         if untested_instrs:
