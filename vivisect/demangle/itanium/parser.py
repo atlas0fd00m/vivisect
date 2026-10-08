@@ -345,10 +345,14 @@ class ItaniumParser:
                             if isinstance(actual, ast.NestedName):
                                 # Flatten the NestedName's prefix into our result
                                 result.extend(actual.prefix)
-                                # Don't add the unqualified_name if template
-                                # args follow (they replace it)
-                                if self._peek() != 'I':
-                                    result.append(actual.unqualified_name)
+                                # If template args follow, include the
+                                # unqualified_name (e.g. 'duration') so the
+                                # template args apply to the full name, not
+                                # just the prefix. Without this, S1_I...E
+                                # where S1_=std::chrono::duration would render
+                                # as std::chrono<...> instead of
+                                # std::chrono::duration<...>.
+                                result.append(actual.unqualified_name)
                             else:
                                 result.append(actual)
                         else:
