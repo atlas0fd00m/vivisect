@@ -159,6 +159,14 @@ class Renderer:
                         return True
         return False
 
+    def _is_operator_part(self, prefix, template_idx):
+        """Check if the element before template_idx is an operator name."""
+        if template_idx > 0:
+            prev = prefix[template_idx - 1]
+            if isinstance(prev, ast.UnqualifiedName) and prev.kind == 'operator':
+                return True
+        return False
+
     def _render_SourceName(self, node):
         return node.name
 
@@ -206,8 +214,11 @@ class Renderer:
             p = prefix[i]
             if isinstance(p, ast.UnqualifiedName) and p.kind == 'template':
                 # Template: append args to the previous component
+                # cxxfilt adds a space before template args when the
+                # preceding component is an operator name (e.g. "operator<< <args>")
                 if parts:
-                    parts[-1] += self.render(p)
+                    sep = ' ' if self._is_operator_part(prefix, i) else ''
+                    parts[-1] += sep + self.render(p)
                 else:
                     parts.append(self.render(p))
             else:
@@ -234,7 +245,12 @@ class Renderer:
                     else:
                         parts[-1] += self.render(unq)
                 else:
-                    parts[-1] += self.render(unq)
+                    # Check if last prefix element is an operator (needs space)
+                    last_prefix = prefix[-1] if prefix else None
+                    if isinstance(last_prefix, ast.UnqualifiedName) and last_prefix.kind == 'operator':
+                        parts[-1] += ' ' + self.render(unq)
+                    else:
+                        parts[-1] += self.render(unq)
             else:
                 parts.append(self.render(unq))
         else:

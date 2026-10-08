@@ -201,7 +201,7 @@ class ItaniumParser:
                 if isinstance(node, ast.Substitution) and node.std_sub:
                     # St followed by a source name = std::name
                     if node.std_sub == 't' and self._peek().isdigit():
-                        # St<source-name> = std::<source-name>
+                        # St<source-name> = std::name
                         inner_name = self._parse_source_name()
                         # Check for template args after the name
                         if self._peek() == 'I':
@@ -216,7 +216,8 @@ class ItaniumParser:
                             [ast.SourceName('std')],
                             ast.UnqualifiedName('source', inner_name)
                         )
-                        self._add_substitution(result)
+                        # Don't add as sub — function names are not substitution
+                        # candidates. Only types and template-prefixes are.
                         return result
                     # St followed by an operator = std::operatorX
                     if node.std_sub == 't' and (self._peek() + self._peek(1)) in grammar.OPERATORS:
@@ -254,11 +255,13 @@ class ItaniumParser:
 
         # Unscoped name
         unq = self._parse_unqualified_name()
-        if substable:
-            self._add_substitution(unq)
 
         # Check for template args (unscoped-template-name)
         if self._peek() == 'I':
+            # Template name: add the unqualified name as a substitution
+            # BEFORE parsing template args (it's a template-prefix)
+            if substable:
+                self._add_substitution(unq)
             targs = self._parse_template_args()
             # Build a template name: the base name + template args
             # Store as a NestedName where the prefix is the base name
