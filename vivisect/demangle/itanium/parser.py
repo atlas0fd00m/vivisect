@@ -177,6 +177,9 @@ class ItaniumParser:
                                                'F', 'A', 'M', 'N', 'S', 'T',
                                                'D', 'u', 'L', 'Z'):
             return True
+        # Source names (digit-prefixed) can be class-enum types
+        if c.isdigit():
+            return True
         return False
 
     # --- Name parsing ---
