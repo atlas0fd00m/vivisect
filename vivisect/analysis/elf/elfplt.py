@@ -81,7 +81,14 @@ def getGOTByFilename(vw, filename):
     Linux binaries tend to have both Sections and Dynamics entries
     OpenBSD is only Sections.
     QNX has only Dynamics.
+
+    If the filename is None (an address not backed by any file, e.g. a
+    memory-only or synthesized workspace), returns (None, None) rather than
+    raising InvalidFile.
     '''
+    if filename is None:
+        return None, None
+
     gottup = vw.getFileMeta(filename, 'GOT')
     if gottup is not None:
         return gottup
@@ -192,6 +199,12 @@ def analyzePLT(vw, ssva, ssize):
         nextseg = sva + ssize
         gotva, gotsize = getGOTByFilename(vw, vw.getFileByVa(ssva))
 
+        # if there is no resolvable GOT for this file/section, there is no
+        # GOT-relative analysis to perform; skip the pass rather than erroring.
+        if gotva is None:
+            logger.debug('analyzePLT(0x%x, 0x%x): no GOT location, skipping', ssva, ssize)
+            return
+
         ###### make code for every opcode in PLT
         # make and parse opcodes.  keep track of unconditional branches
         branchvas = []
@@ -291,7 +304,16 @@ def analyzePLT(vw, ssva, ssize):
 
                     # after analyzing the situation, emulate the opcode
                     if not skip:
-                        emu.executeOpcode(op)
+                        try:
+                            emu.executeOpcode(op)
+                        except envi.exc.UnsupportedInstruction as e:
+                            # Some PLTs contain opcodes the emulator cannot
+                            # execute (e.g. 'hlt').  That is not an error for
+                            # this pass - skip the opcode and continue sweeping
+                            # the rest of the PLT section.
+                            logger.debug("analyzePLT: skipping unsupported opcode 0x%x: %s", op.va, e)
+                        except envi.exc.SegmentationViolation as e:
+                            logger.debug("analyzePLT: skipping segv during emulation at 0x%x: %s", op.va, e)
 
                 sva += lsz
                 logger.debug('incrementing to next va: 0x%x', sva)
@@ -373,7 +395,10 @@ def analyzeFunction(vw, funcva):
                     taintrepr = emu.reprVivTaint(taintval)
                 else:
                     taintrepr = 'None'
-                logger.error('0x%x: opval=0x%x: brflags is BR_DEREF, but loctup is None.  Don\'t know what to do. skipping.  taint:%r (%r)', op.va, opval, taintval, taintrepr)
+                # This is a handled, non-fatal condition: a BR_DEREF branch
+                # whose target has no location *and* no recovered taint is not
+                # resolvable yet, so we skip it and move on.  Log at debug level.
+                logger.debug('0x%x: opval=0x%x: brflags is BR_DEREF, but loctup is None.  skipping.  taint:%r (%r)', op.va, opval, taintval, taintrepr)
                 continue
 
             lva, lsz, ltype, ltinfo = loctup

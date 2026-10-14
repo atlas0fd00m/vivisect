@@ -108,7 +108,11 @@ def analyzeFunction(vw, fva):
     try:
         emu.runFunction(fva, maxhit=1)
     except Exception:
-        logger.exception("Error emulating function 0x%x\n\t%r", fva, emumon.emuanom)
+        # Emulation of a thunk may fail for code the emulator cannot handle
+        # (hand-written thunks, undefined instructions).  This is expected and
+        # non-fatal; record the anomaly for diagnostics rather than dumping a
+        # full error traceback.
+        logger.debug("Error emulating function 0x%x\n\t%r", fva, emumon.emuanom)
 
     # now roll through tracked references and make xrefs/comments
     items = list(emumon.tracker.items())
