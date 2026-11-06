@@ -380,12 +380,17 @@ class ItaniumParser:
                     if self._peek() == "I":
                         # Add template-prefix as sub BEFORE parsing args
                         # (matches cxxfilt/libiberty behavior)
-                        # BUT: for predefined subs (Sa, Sb, Ss, Si, So, Sd),
-                        # cxxfilt's d_prefix does 'continue' after
-                        # d_substitution, skipping the sub addition. The
-                        # template-prefix is NOT added — only the full
-                        # instantiation after template args.
-                        if not sub.std_sub or sub.std_sub == "t":
+                        # BUT: skip for predefined subs (Sa, Sb, Ss, Si, So, Sd)
+                        # — cxxfilt's d_prefix does 'continue' after
+                        # d_substitution, so the template-prefix is NOT added.
+                        # ALSO skip for indexed subs (S0_, S1_, etc.) — cxxfilt
+                        # does not re-add a prefix that was resolved from a
+                        # back-reference.
+                        if sub.std_sub and sub.std_sub != "t":
+                            pass  # predefined sub: skip
+                        elif sub.index is not None:
+                            pass  # indexed sub: skip
+                        else:
                             if len(result) == 1:
                                 self._add_substitution(result[0])
                             else:
