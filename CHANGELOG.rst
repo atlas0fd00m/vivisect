@@ -2,6 +2,68 @@
 Vivisect Changelog
 ******************
 
+V1.3.2 - 2026-03-30
+===================
+Fixes
+-----
+- Fix issues in AArch64 disassembly and emulation.
+  (`#690 <https://github.com/vivisect/vivisect/pull/690>`_)
+
+V1.3.1 - 2026-03-30
+===================
+Fixes
+-----
+- Upgrade pyasn1 dependencies to resolve CVE-2026-23490.
+  (`#693 <https://github.com/vivisect/vivisect/pull/693>`_)
+- Fix undeclared variable usage and attempts to read from `[vvar_vclock]` in vtrace.utils.
+  (`#693 <https://github.com/vivisect/vivisect/pull/693>`_)
+
+V1.3.0 - 2026-01-09
+===================
+Features
+--------
+- Improve how VStruct renders structures.
+  (`#674 <https://github.com/vivisect/vivisect/pull/674>`_)
+- Added support for AArch64.
+  (`#224 <https://github.com/vivisect/vivisect/pull/224>`_)
+
+Fixes
+-----
+- Various fixes to the PE and ELF loaders.
+  (`#659 <https://github.com/vivisect/vivisect/pull/659>`_)
+- Various improvements to ARM support.
+  (`#672 <https://github.com/vivisect/vivisect/pull/672>`_)
+- Fix ``readMemString`` to respect admin rights.
+  (`#677 <https://github.com/vivisect/vivisect/pull/677>`_)
+- Fix references being added for dynamic calls.
+  (`#678 <https://github.com/vivisect/vivisect/pull/678>`_)
+
+
+V1.2.1 - 2024-07-24
+===================
+Fixes
+-----
+- Fix an off by one issue in the LNK parser.
+  (`#655 <https://github.com/vivisect/vivisect/pull/655>`_)
+- Fix Callgraph initialization and UI rendering
+  (`#657 <https://github.com/vivisect/vivisect/pull/657>`_)
+- Fix an issue in readMemString where the last null byte of a wide string should be considered part of the terminator.
+  (`#663 <https://github.com/vivisect/vivisect/pull/663>`_)
+- Add a missing ARM alias.
+  (`#667 <https://github.com/vivisect/vivisect/pull/667>`_)
+- Fix default ARM arch name.
+  (`#668 <https://github.com/vivisect/vivisect/pull/668>`_)
+
+Devops
+------
+- Update to large resource class in CI configuration.
+  (`#526 <https://github.com/vivisect/vivisect/pull/526>`_)
+
+Documentation
+-------------
+- Fix the readthedocs build.
+  (`#654 <https://github.com/vivisect/vivisect/pull/654>`_)
+
 V1.2.0 - 2024-07-15
 ===================
 Features

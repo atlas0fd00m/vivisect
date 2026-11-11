@@ -127,14 +127,15 @@ class RiscVInstrDisasm32Test(RiscVInstrDisasmTest):
 class RiscVEmuTest(unittest.TestCase):
 
     def setUp(self):
-        import envi.memory as e_mem
+        import envi
         self.arch = get_arch(64)
         # getEmulator should now work (constructor tangles fixed)
         self.emu = self.arch.getEmulator()
         self.emu.setProgramCounter(0x1000)
-        # map pages for load/store tests (RWX)
-        self.emu.addMemoryMap(0x1000, e_mem.MM_RWX, 'test', b'\x00' * 0x1000)
-        self.emu.addMemoryMap(0x0, e_mem.MM_RWX, 'page0', b'\x00' * 0x1000)
+        # map pages for load/store tests (RWX; perms live on `envi` after the
+        # upstream memory-perms refactor)
+        self.emu.addMemoryMap(0x1000, envi.MM_RWX, 'test', b'\x00' * 0x1000)
+        self.emu.addMemoryMap(0x0, envi.MM_RWX, 'page0', b'\x00' * 0x1000)
 
     def _run(self, hexbytes, regs=None):
         """set regs, exec opcode, return"""
