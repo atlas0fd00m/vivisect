@@ -61,7 +61,7 @@ class VivisectMultiFileTest(v_t_utils.VivTest):
         # The exact count varies by environment (68 on some CI runners and local
         # hosts, 70 on others) due to nondeterminism in which PLT sections get
         # named, so accept the observed range.
-        self.assertIn(len(chgrp_plt_names), (68, 70))
+        self.assertEqual(len(chgrp_plt_names), 68)
         self.assertEqual(len(ld_2_31_plt_names), 8)
 
         ## now just poke at one or two in each proggy
