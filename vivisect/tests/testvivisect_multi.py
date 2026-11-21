@@ -57,10 +57,6 @@ class VivisectMultiFileTest(v_t_utils.VivTest):
         chgrp_plt_names = [(va,name) for va,name in vw.getNames() if 'chgrp.plt_' in name]
         ld_2_31_plt_names = [(va,name) for va,name in vw.getNames() if 'ld_2_31.plt_' in name]
         self.assertEqual(len(vdir_plt_names), 0)    # can't expect PLT analysis to work for a binary not intended to be relocated.  
-        # this is more than we get when loading chgrp on it's own!?
-        # The exact count varies by environment (68 on some CI runners and local
-        # hosts, 70 on others) due to nondeterminism in which PLT sections get
-        # named, so accept the observed range.
         self.assertEqual(len(chgrp_plt_names), 68)
         self.assertEqual(len(ld_2_31_plt_names), 8)
 
